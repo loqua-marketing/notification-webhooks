@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Escolha a ação:"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <RadioGroup
+        android:id="@+id/rgActionType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp">
+
+        <RadioButton
+            android:id="@+id/rbWebhookAuto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌐 Webhook Automático"
+            android:checked="true"/>
+
+        <RadioButton
+            android:id="@+id/rbWebhookAuth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔐 Webhook com Autorização"/>
+    </RadioGroup>
+
+    <!-- URL do Webhook -->
+    <LinearLayout
+        android:id="@+id/layoutWebhookUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="URL do Webhook:"
+            android:textSize="14sp"
+            android:layout_marginBottom="4dp"/>
+
+        <EditText
+            android:id="@+id/etWebhookUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="https://exemplo.com/webhook"
+            android:inputType="textUri"
+            android:padding="8dp"
+            android:background="@android:drawable/editbox_background"/>
+    </LinearLayout>
+
+    <!-- Headers (opcional) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Headers (opcional, formato JSON):"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp"/>
+
+    <EditText
+        android:id="@+id/etHeaders"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint='{"Content-Type": "application/json"}'
+        android:inputType="textMultiLine"
+        android:lines="3"
+        android:padding="8dp"
+        android:background="@android:drawable/editbox_background"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Ajuda -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💡 Pode usar ferramentas como webhook.site para testar"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"/>
+
+</LinearLayout>

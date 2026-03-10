@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Botões superiores -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <Button
+            android:id="@+id/btnRefresh"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Atualizar"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Limpar"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Permissão"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <!-- FILTROS -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Filtrar por:"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp"
+        android:weightSum="5">
+
+        <Button
+            android:id="@+id/btnFilterAll"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="📋"
+            android:textSize="20sp"
+            android:backgroundTint="#FF9800"
+            android:layout_marginEnd="2dp"/>
+
+        <Button
+            android:id="@+id/btnFilterProcessed"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="✅"
+            android:textSize="24sp"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginEnd="2dp"/>
+
+        <Button
+            android:id="@+id/btnFilterPending"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="⏳"
+            android:textSize="24sp"
+            android:backgroundTint="#FF9800"
+            android:layout_marginEnd="2dp"/>
+
+        <Button
+            android:id="@+id/btnFilterReceived"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="📥"
+            android:textSize="24sp"
+            android:backgroundTint="#2196F3"
+            android:layout_marginEnd="2dp"/>
+
+        <Button
+            android:id="@+id/btnFilterRejected"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="✗"
+            android:textSize="24sp"
+            android:backgroundTint="#F44336"/>
+    </LinearLayout>
+
+    <!-- Contadores -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"
+        android:weightSum="5">
+
+        <TextView
+            android:id="@+id/tvCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Total: 0"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvCountProcessed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="✅ 0"
+            android:textSize="12sp"
+            android:textColor="#4CAF50"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/tvCountPending"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⏳ 0"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/tvCountReceived"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📥 0"
+            android:textSize="12sp"
+            android:textColor="#2196F3"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/tvCountRejected"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="✗ 0"
+            android:textSize="12sp"
+            android:textColor="#F44336"
+            android:gravity="center"/>
+    </LinearLayout>
+
+    <!-- Lista vazia -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nenhuma notificação guardada"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:visibility="gone"/>
+
+    <!-- Container da lista -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:id="@+id/container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+    </ScrollView>
+
+</LinearLayout>

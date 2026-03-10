@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@android:color/white">
+
+    <!-- Cabeçalho com ícone -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="32dp">
+
+        <TextView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="📱"
+            android:textSize="64dp"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Notification Auto"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="A carregar..."
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginTop="4dp"/>
+
+        <Button
+        android:id="@+id/btnAbout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🤖 About"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"/>
+
+    </LinearLayout>
+
+    <!-- Card de Ações Principais -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ações"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
+
+            <Button
+                android:id="@+id/btnViewList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📋 Ver Notificações"
+                android:backgroundTint="#2196F3"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/btnRules"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚙️ Gerir Regras"
+                android:backgroundTint="#FF9800"
+                android:layout_marginBottom="8dp"/>
+
+            <Button
+                android:id="@+id/btnCheckPermission"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔐 Verificar Permissões"
+                android:backgroundTint="#4CAF50"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Card de Backup -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Backup"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnExport"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📤 Exportar"
+                    android:backgroundTint="#9C27B0"
+                    android:layout_marginEnd="4dp"/>
+
+                <Button
+                    android:id="@+id/btnImport"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📥 Importar"
+                    android:backgroundTint="#9C27B0"
+                    android:layout_marginStart="4dp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</LinearLayout>

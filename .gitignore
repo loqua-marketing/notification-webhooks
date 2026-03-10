@@ -1,0 +1,36 @@
+# Build files
+/build/
+/app/build/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.gradle/
+local.properties
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keystore
+*.keystore
+*.jks
+signing.properties
+
+# Backups (já tens vários .bak)
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*.bak5
+*.bak6
+
+# ML Models (grandes)
+*.tflite
+*.lite
+/assets/*.tflite

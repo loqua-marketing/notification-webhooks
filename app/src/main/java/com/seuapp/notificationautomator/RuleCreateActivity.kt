@@ -1,0 +1,620 @@
+package com.seuapp.notificationautomator
+
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.seuapp.notificationautomator.data.model.ActionType
+import com.seuapp.notificationautomator.data.model.Rule
+import com.seuapp.notificationautomator.ui.viewmodel.RuleViewModel
+import java.util.*
+
+class RuleCreateActivity : AppCompatActivity() {
+    
+    private lateinit var viewModel: RuleViewModel
+    private val TAG = "RuleCreateActivity"
+    private val gson = Gson()
+    
+    // Views do stepper
+    private lateinit var tvStep1: TextView
+    private lateinit var tvStep2: TextView
+    private lateinit var tvStep3: TextView
+    private lateinit var tvStep4: TextView
+    
+    // Botões de navegação
+    private lateinit var btnPrevious: Button
+    private lateinit var btnNext: Button
+    private lateinit var btnSave: Button
+    private lateinit var btnCancel: Button
+    
+    // Container para os steps
+    private lateinit var container: LinearLayout
+    
+    // Step atual
+    private var currentStep = 1
+    
+    // Dados da regra (vão sendo preenchidos)
+    private var selectedAppPackage: String? = null
+    private var selectedAppName: String? = null
+    private var titleContains: String? = null
+    private var textContains: String? = null
+    private var hourFrom: String? = null
+    private var hourTo: String? = null
+    private var selectedDays: MutableList<String> = mutableListOf()
+    private var isSilent: Boolean? = null
+    private var hasImage: Boolean = false
+    private var actionType: ActionType = ActionType.WEBHOOK_AUTO
+    private var webhookUrl: String? = null
+    private var webhookHeaders: Map<String, String>? = null
+    private var ruleName: String = ""
+    
+    // Para edição
+    private var editingRuleId: Long? = null
+    private var isEditMode: Boolean = false
+    private var isDuplicateMode: Boolean = false
+    
+    // Para aplicar regra à notificação atual
+    private var applyRuleNow: Boolean = false
+    private var notificationId: Long = 0
+    
+    // Para pré-preenchimento (quando vem de notificação)
+    private var notificationPackage: String? = null
+    private var notificationTitle: String? = null
+    private var notificationText: String? = null
+    private var notificationTimestamp: Long = 0
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_rule_create)
+        
+        isEditMode = intent.getBooleanExtra("is_edit_mode", false)
+        isDuplicateMode = intent.getBooleanExtra("is_duplicate_mode", false)
+        editingRuleId = intent.getLongExtra("rule_id", 0).takeIf { it != 0L }
+        
+        applyRuleNow = intent.getBooleanExtra("apply_rule_now", false)
+        notificationId = intent.getLongExtra("notification_id", 0)
+        
+        val ruleJson = intent.getStringExtra("rule_json")
+        if (ruleJson != null) {
+            carregarRegraExistente(ruleJson)
+        }
+        
+        notificationPackage = intent.getStringExtra("notification_package")
+        notificationTitle = intent.getStringExtra("notification_title")
+        notificationText = intent.getStringExtra("notification_text")
+        notificationTimestamp = intent.getLongExtra("notification_timestamp", 0)
+        
+        Log.d(TAG, "Modo: ${if (isEditMode) "Edição" else if (isDuplicateMode) "Duplicação" else "Criação"}")
+        Log.d(TAG, "Notificação package: $notificationPackage")
+        Log.d(TAG, "Aplicar regra à notificação $notificationId: $applyRuleNow")
+        
+        initViews()
+        setupViewModel()
+        setupStep(1)
+    }
+    
+    private fun carregarRegraExistente(ruleJson: String) {
+        try {
+            val rule = gson.fromJson(ruleJson, Rule::class.java)
+            
+            selectedAppPackage = rule.appPackage
+            titleContains = rule.titleContains
+            textContains = rule.textContains
+            hourFrom = rule.hourFrom
+            hourTo = rule.hourTo
+            rule.daysOfWeek?.let {
+                selectedDays = it.split(",").toMutableList()
+            }
+            isSilent = rule.isSilent
+            hasImage = rule.hasImage ?: false
+            actionType = rule.actionType
+            webhookUrl = rule.webhookUrl
+            rule.webhookHeaders?.let {
+                try {
+                    webhookHeaders = gson.fromJson(it, object : TypeToken<Map<String, String>>() {}.type)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            ruleName = rule.name
+            
+            Log.d(TAG, "Regra carregada: $ruleName - Package: $selectedAppPackage")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao carregar regra", e)
+        }
+    }
+    
+    private fun initViews() {
+        tvStep1 = findViewById(R.id.tvStep1)
+        tvStep2 = findViewById(R.id.tvStep2)
+        tvStep3 = findViewById(R.id.tvStep3)
+        tvStep4 = findViewById(R.id.tvStep4)
+        btnPrevious = findViewById(R.id.btnPrevious)
+        btnNext = findViewById(R.id.btnNext)
+        btnSave = findViewById(R.id.btnSave)
+        btnCancel = findViewById(R.id.btnCancel)
+        container = findViewById(R.id.container)
+        
+        btnCancel.setOnClickListener {
+            finish()
+        }
+    }
+    
+    private fun setupViewModel() {
+        viewModel = ViewModelProvider(this)[RuleViewModel::class.java]
+    }
+    
+    private fun setupStep(step: Int) {
+        currentStep = step
+        atualizarStepper()
+        container.removeAllViews()
+        
+        try {
+            when (step) {
+                1 -> showStepApp()
+                2 -> showStepConditions()
+                3 -> showStepAction()
+                4 -> showStepReview()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao mostrar step $step", e)
+            Toast.makeText(this, "Erro: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+        
+        btnPrevious.isEnabled = step > 1
+        btnNext.visibility = if (step < 4) View.VISIBLE else View.GONE
+        btnSave.visibility = if (step == 4) View.VISIBLE else View.GONE
+    }
+    
+    private fun atualizarStepper() {
+        tvStep1.setBackgroundResource(R.drawable.step_background_inactive)
+        tvStep2.setBackgroundResource(R.drawable.step_background_inactive)
+        tvStep3.setBackgroundResource(R.drawable.step_background_inactive)
+        tvStep4.setBackgroundResource(R.drawable.step_background_inactive)
+        
+        when (currentStep) {
+            1 -> tvStep1.setBackgroundResource(R.drawable.step_background_active)
+            2 -> tvStep2.setBackgroundResource(R.drawable.step_background_active)
+            3 -> tvStep3.setBackgroundResource(R.drawable.step_background_active)
+            4 -> tvStep4.setBackgroundResource(R.drawable.step_background_active)
+        }
+    }
+    
+    private fun showStepApp() {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.step_app, container, true)
+        
+        val rgAppChoice = view.findViewById<RadioGroup>(R.id.rgAppChoice)
+        val spinnerApps = view.findViewById<Spinner>(R.id.spinnerApps)
+        val tvSelectedApp = view.findViewById<TextView>(R.id.tvSelectedApp)
+        val tvPackageHint = view.findViewById<TextView>(R.id.tvPackageHint)
+        
+        val apps = getInstalledApps()
+        val appNames = apps.map { it.first }
+        val appPackages = apps.map { it.second }
+        
+        // Criar lista combinada (nome + package) para mostrar no spinner
+        val appDisplayList = apps.map { (name, pkg) ->
+            "$name ($pkg)"
+        }
+        
+        if (appDisplayList.isEmpty()) {
+            Toast.makeText(this, "Nenhuma app encontrada", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, appDisplayList)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerApps.adapter = adapter
+        
+        Log.d(TAG, "Apps disponíveis:")
+        apps.forEachIndexed { index, (name, pkg) ->
+            Log.d(TAG, "   $index: $name - $pkg")
+        }
+        
+        // Se veio de uma notificação, pré-selecionar a app
+        if (notificationPackage != null) {
+            val pkg = notificationPackage!!
+            Log.d(TAG, "Procurando package da notificação: $pkg")
+            val index = appPackages.indexOfFirst { it == pkg }
+            if (index >= 0) {
+                spinnerApps.setSelection(index)
+                selectedAppPackage = pkg
+                selectedAppName = appNames[index]
+                tvSelectedApp.text = "App selecionada: ${appNames[index]}"
+                tvPackageHint.text = "Package: $pkg"
+                rgAppChoice.check(R.id.rbSpecificApp)
+                Log.d(TAG, "✅ App encontrada: ${appNames[index]}")
+            } else {
+                Log.d(TAG, "❌ Package não encontrado na lista")
+                if (appNames.isNotEmpty()) {
+                    spinnerApps.setSelection(0)
+                    selectedAppPackage = appPackages[0]
+                    selectedAppName = appNames[0]
+                    tvSelectedApp.text = "App selecionada: ${appNames[0]}"
+                    tvPackageHint.text = "Package: ${appPackages[0]}"
+                }
+            }
+        } else {
+            if (appNames.isNotEmpty()) {
+                spinnerApps.setSelection(0)
+                selectedAppPackage = appPackages[0]
+                selectedAppName = appNames[0]
+                tvSelectedApp.text = "App selecionada: ${appNames[0]}"
+                tvPackageHint.text = "Package: ${appPackages[0]}"
+            }
+        }
+        
+        spinnerApps.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedAppPackage = appPackages[position]
+                selectedAppName = appNames[position]
+                tvSelectedApp.text = "App selecionada: ${appNames[position]}"
+                tvPackageHint.text = "Package: ${appPackages[position]}"
+                Log.d(TAG, "App selecionada: ${appNames[position]} - ${appPackages[position]}")
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        
+        rgAppChoice.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                R.id.rbSpecificApp -> {
+                    spinnerApps.isEnabled = true
+                    tvPackageHint.visibility = View.VISIBLE
+                    if (appNames.isNotEmpty()) {
+                        val position = spinnerApps.selectedItemPosition
+                        selectedAppPackage = appPackages[position]
+                        selectedAppName = appNames[position]
+                        tvSelectedApp.text = "App selecionada: ${appNames[position]}"
+                        tvPackageHint.text = "Package: ${appPackages[position]}"
+                    }
+                }
+                R.id.rbAnyApp -> {
+                    spinnerApps.isEnabled = false
+                    tvPackageHint.visibility = View.GONE
+                    selectedAppPackage = null
+                    selectedAppName = null
+                    tvSelectedApp.text = "Qualquer app"
+                }
+            }
+        }
+        
+        btnPrevious.setOnClickListener { }
+        btnNext.setOnClickListener {
+            setupStep(2)
+        }
+    }    
+    private fun getInstalledApps(): List<Pair<String, String>> {
+        return try {
+            val pm = packageManager
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            
+            // Filtrar apenas apps de usuário e algumas conhecidas
+            val filteredApps = apps.filter { app ->
+                (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
+                app.packageName == "com.google.android.gm" ||
+                app.packageName == "com.whatsapp" ||
+                app.packageName == "com.facebook.katana" ||
+                app.packageName == "com.linkedin.android" ||
+                app.packageName == "com.google.android.apps.maps"
+            }.map { app ->
+                val name = pm.getApplicationLabel(app).toString()
+                name to app.packageName
+            }.sortedBy { it.first } // Ordenar por nome
+            
+            filteredApps
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao listar apps", e)
+            emptyList()
+        }
+    }
+    
+    private fun showStepConditions() {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.step_conditions, container, true)
+        
+        val etTitleContains = view.findViewById<EditText>(R.id.etTitleContains)
+        val etTextContains = view.findViewById<EditText>(R.id.etTextContains)
+        val cbEnableTime = view.findViewById<CheckBox>(R.id.cbEnableTime)
+        val layoutTime = view.findViewById<LinearLayout>(R.id.layoutTime)
+        val etHourFrom = view.findViewById<EditText>(R.id.etHourFrom)
+        val etHourTo = view.findViewById<EditText>(R.id.etHourTo)
+        
+        val cbMonday = view.findViewById<CheckBox>(R.id.cbMonday)
+        val cbTuesday = view.findViewById<CheckBox>(R.id.cbTuesday)
+        val cbWednesday = view.findViewById<CheckBox>(R.id.cbWednesday)
+        val cbThursday = view.findViewById<CheckBox>(R.id.cbThursday)
+        val cbFriday = view.findViewById<CheckBox>(R.id.cbFriday)
+        val cbSaturday = view.findViewById<CheckBox>(R.id.cbSaturday)
+        val cbSunday = view.findViewById<CheckBox>(R.id.cbSunday)
+        val cbAllDays = view.findViewById<CheckBox>(R.id.cbAllDays)
+        
+        val rgNotificationType = view.findViewById<RadioGroup>(R.id.rgNotificationType)
+        val cbHasImage = view.findViewById<CheckBox>(R.id.cbHasImage)
+        
+        // Pré-preenchimento com dados existentes
+        titleContains?.let { etTitleContains.setText(it) }
+        textContains?.let { etTextContains.setText(it) }
+        
+        if (hourFrom != null && hourTo != null) {
+            cbEnableTime.isChecked = true
+            layoutTime.visibility = View.VISIBLE
+            etHourFrom.setText(hourFrom)
+            etHourTo.setText(hourTo)
+        }
+        
+        selectedDays.forEach { day ->
+            when (day) {
+                "MONDAY" -> cbMonday.isChecked = true
+                "TUESDAY" -> cbTuesday.isChecked = true
+                "WEDNESDAY" -> cbWednesday.isChecked = true
+                "THURSDAY" -> cbThursday.isChecked = true
+                "FRIDAY" -> cbFriday.isChecked = true
+                "SATURDAY" -> cbSaturday.isChecked = true
+                "SUNDAY" -> cbSunday.isChecked = true
+            }
+        }
+        
+        when (isSilent) {
+            true -> rgNotificationType.check(R.id.rbSilent)
+            false -> rgNotificationType.check(R.id.rbAlerting)
+            else -> rgNotificationType.check(R.id.rbAnyType)
+        }
+        
+        cbHasImage.isChecked = hasImage
+        
+        cbEnableTime.setOnCheckedChangeListener { _, isChecked ->
+            layoutTime.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+        
+        if (notificationTimestamp > 0 && !isEditMode && !isDuplicateMode) {
+            try {
+                val calendar = Calendar.getInstance()
+                calendar.timeInMillis = notificationTimestamp
+                val hour = calendar.get(Calendar.HOUR_OF_DAY)
+                val minute = calendar.get(Calendar.MINUTE)
+                
+                cbEnableTime.isChecked = true
+                etHourFrom.setText(String.format("%02d:%02d", (hour - 1).coerceIn(0, 23), minute))
+                etHourTo.setText(String.format("%02d:%02d", (hour + 1).coerceIn(0, 23), minute))
+                
+                when (calendar.get(Calendar.DAY_OF_WEEK)) {
+                    Calendar.MONDAY -> cbMonday.isChecked = true
+                    Calendar.TUESDAY -> cbTuesday.isChecked = true
+                    Calendar.WEDNESDAY -> cbWednesday.isChecked = true
+                    Calendar.THURSDAY -> cbThursday.isChecked = true
+                    Calendar.FRIDAY -> cbFriday.isChecked = true
+                    Calendar.SATURDAY -> cbSaturday.isChecked = true
+                    Calendar.SUNDAY -> cbSunday.isChecked = true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao processar timestamp", e)
+            }
+        }
+        
+        cbAllDays.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                cbMonday.isChecked = true
+                cbTuesday.isChecked = true
+                cbWednesday.isChecked = true
+                cbThursday.isChecked = true
+                cbFriday.isChecked = true
+                cbSaturday.isChecked = true
+                cbSunday.isChecked = true
+            }
+        }
+        
+        btnPrevious.setOnClickListener { setupStep(1) }
+        btnNext.setOnClickListener {
+            titleContains = etTitleContains.text.toString().takeIf { it.isNotBlank() }
+            textContains = etTextContains.text.toString().takeIf { it.isNotBlank() }
+            
+            if (cbEnableTime.isChecked) {
+                hourFrom = etHourFrom.text.toString().takeIf { it.isNotBlank() }
+                hourTo = etHourTo.text.toString().takeIf { it.isNotBlank() }
+            } else {
+                hourFrom = null
+                hourTo = null
+            }
+            
+            selectedDays.clear()
+            if (cbMonday.isChecked) selectedDays.add("MONDAY")
+            if (cbTuesday.isChecked) selectedDays.add("TUESDAY")
+            if (cbWednesday.isChecked) selectedDays.add("WEDNESDAY")
+            if (cbThursday.isChecked) selectedDays.add("THURSDAY")
+            if (cbFriday.isChecked) selectedDays.add("FRIDAY")
+            if (cbSaturday.isChecked) selectedDays.add("SATURDAY")
+            if (cbSunday.isChecked) selectedDays.add("SUNDAY")
+            
+            isSilent = when (rgNotificationType.checkedRadioButtonId) {
+                R.id.rbSilent -> true
+                R.id.rbAlerting -> false
+                else -> null
+            }
+            
+            hasImage = cbHasImage.isChecked
+            
+            setupStep(3)
+        }
+    }
+    
+    private fun showStepAction() {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.step_action, container, true)
+        
+        val rgActionType = view.findViewById<RadioGroup>(R.id.rgActionType)
+        val layoutWebhookUrl = view.findViewById<LinearLayout>(R.id.layoutWebhookUrl)
+        val etWebhookUrl = view.findViewById<EditText>(R.id.etWebhookUrl)
+        val etHeaders = view.findViewById<EditText>(R.id.etHeaders)
+        
+        when (actionType) {
+            ActionType.WEBHOOK_AUTO -> rgActionType.check(R.id.rbWebhookAuto)
+            ActionType.WEBHOOK_AUTH -> rgActionType.check(R.id.rbWebhookAuth)
+        }
+        
+        webhookUrl?.let { etWebhookUrl.setText(it) }
+        webhookHeaders?.let {
+            etHeaders.setText(gson.toJson(it))
+        }
+        
+        rgActionType.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                R.id.rbWebhookAuto -> {
+                    actionType = ActionType.WEBHOOK_AUTO
+                    layoutWebhookUrl.visibility = View.VISIBLE
+                }
+                R.id.rbWebhookAuth -> {
+                    actionType = ActionType.WEBHOOK_AUTH
+                    layoutWebhookUrl.visibility = View.VISIBLE
+                }
+            }
+        }
+        
+        btnPrevious.setOnClickListener { setupStep(2) }
+        btnNext.setOnClickListener {
+            webhookUrl = etWebhookUrl.text.toString().takeIf { it.isNotBlank() }
+            
+            val headersText = etHeaders.text.toString()
+            if (headersText.isNotBlank()) {
+                try {
+                    val type = object : TypeToken<Map<String, String>>() {}.type
+                    webhookHeaders = gson.fromJson(headersText, type)
+                } catch (e: Exception) {
+                    Toast.makeText(this@RuleCreateActivity, "Headers inválidos. Use formato JSON", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+            
+            if (webhookUrl == null) {
+                Toast.makeText(this@RuleCreateActivity, "URL do webhook é obrigatório", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            setupStep(4)
+        }
+    }
+    
+    private fun showStepReview() {
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.step_review, container, true)
+        
+        val tvReviewName = view.findViewById<TextView>(R.id.tvReviewName)
+        val tvReviewApp = view.findViewById<TextView>(R.id.tvReviewApp)
+        val tvReviewConditions = view.findViewById<TextView>(R.id.tvReviewConditions)
+        val tvReviewAction = view.findViewById<TextView>(R.id.tvReviewAction)
+        val etRuleName = view.findViewById<EditText>(R.id.etRuleName)
+        val cbActivateNow = view.findViewById<CheckBox>(R.id.cbActivateNow)
+        val cbApplyToCurrent = view.findViewById<CheckBox>(R.id.cbApplyToCurrent)
+        
+        if (applyRuleNow && notificationId > 0) {
+            cbApplyToCurrent.visibility = View.VISIBLE
+            cbApplyToCurrent.isChecked = true
+        } else {
+            cbApplyToCurrent.visibility = View.GONE
+        }
+        
+        if (ruleName.isNotEmpty()) {
+            etRuleName.setText(ruleName)
+        } else {
+            val suggestedName = buildString {
+                append(selectedAppName ?: "Qualquer app")
+                if (!titleContains.isNullOrBlank()) {
+                    append(" - \"$titleContains\"")
+                }
+            }
+            etRuleName.setText(suggestedName)
+        }
+        
+        tvReviewApp.text = "📱 App: ${selectedAppName ?: "Qualquer app"}"
+        
+        val conditions = mutableListOf<String>()
+        titleContains?.let { conditions.add("Título contém \"$it\"") }
+        textContains?.let { conditions.add("Texto contém \"$it\"") }
+        if (hourFrom != null && hourTo != null) {
+            conditions.add("Horário: $hourFrom-$hourTo")
+        }
+        if (selectedDays.isNotEmpty()) {
+            val days = selectedDays.joinToString(" ") {
+                when (it) {
+                    "MONDAY" -> "Seg"
+                    "TUESDAY" -> "Ter"
+                    "WEDNESDAY" -> "Qua"
+                    "THURSDAY" -> "Qui"
+                    "FRIDAY" -> "Sex"
+                    "SATURDAY" -> "Sáb"
+                    "SUNDAY" -> "Dom"
+                    else -> it
+                }
+            }
+            conditions.add("Dias: $days")
+        }
+        when (isSilent) {
+            true -> conditions.add("🔇 Silenciosa")
+            false -> conditions.add("🔔 Alertante")
+            else -> { }
+        }
+        if (hasImage) conditions.add("🖼️ Com imagem")
+        
+        tvReviewConditions.text = if (conditions.isEmpty()) "Sem condições" else conditions.joinToString("\n")
+        
+        tvReviewAction.text = when (actionType) {
+            ActionType.WEBHOOK_AUTO -> "🌐 Webhook automático: $webhookUrl"
+            ActionType.WEBHOOK_AUTH -> "🔐 Webhook com autorização: $webhookUrl"
+        }
+        
+        btnPrevious.setOnClickListener { setupStep(3) }
+        btnSave.setOnClickListener {
+            ruleName = etRuleName.text.toString()
+            if (ruleName.isBlank()) {
+                Toast.makeText(this@RuleCreateActivity, "Nome da regra é obrigatório", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            Log.d(TAG, "A guardar regra com package: $selectedAppPackage")
+            
+            val rule = Rule(
+                id = if (isEditMode) editingRuleId ?: 0 else 0,
+                name = ruleName,
+                isActive = if (isEditMode) {
+                    true
+                } else {
+                    cbActivateNow.isChecked
+                },
+                appPackage = selectedAppPackage,
+                titleContains = titleContains,
+                textContains = textContains,
+                hourFrom = hourFrom,
+                hourTo = hourTo,
+                daysOfWeek = if (selectedDays.isNotEmpty()) selectedDays.joinToString(",") else null,
+                isSilent = isSilent,
+                hasImage = hasImage,
+                actionType = actionType,
+                webhookUrl = webhookUrl,
+                webhookHeaders = gson.toJson(webhookHeaders)
+            )
+            
+            if (isEditMode) {
+                viewModel.updateRule(rule)
+                Toast.makeText(this@RuleCreateActivity, "Regra atualizada com sucesso!", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.saveRule(rule)
+                Toast.makeText(this@RuleCreateActivity, "Regra criada com sucesso!", Toast.LENGTH_SHORT).show()
+            }
+            
+            if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
+                Log.d(TAG, "A aplicar regra à notificação $notificationId")
+                viewModel.applyRuleToNotification(rule, notificationId)
+            }
+            
+            finish()
+        }
+    }
+}

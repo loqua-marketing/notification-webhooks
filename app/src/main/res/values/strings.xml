@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Notification Auto</string>
+    <string name="notification_listener_name">Notification Listener</string>
+    
+    <!-- Main Activity -->
+    <string name="notifications">Notifications</string>
+    <string name="storage">Storage</string>
+    <string name="actions">Actions</string>
+    <string name="view_notifications">📋 View Notifications</string>
+    <string name="manage_rules">⚙️ Manage Rules</string>
+    <string name="check_permissions">🔐 Check Permissions</string>
+    <string name="backup">Backup</string>
+    <string name="export_btn">📤 Export</string>
+    <string name="import_btn">📥 Import</string>
+    
+    <!-- Notification List -->
+    <string name="refresh">Refresh</string>
+    <string name="clear">Clear</string>
+    <string name="permission">Permission</string>
+    <string name="filter_by">Filter by:</string>
+    <string name="total">Total:</string>
+    <string name="no_notifications">No notifications saved</string>
+    
+    <!-- Status -->
+    <string name="received">Received</string>
+    <string name="automatic">Automatic</string>
+    <string name="pending">Pending</string>
+    <string name="approved">Approved</string>
+    <string name="rejected">Rejected</string>
+    <string name="error">Error</string>
+    
+    <!-- Options -->
+    <string name="create_rule">⚡ Create Rule</string>
+    <string name="process_with_rules">⚡ Process with Rules</string>
+    <string name="execute_rule_now">▶️ Execute Rule Now</string>
+    <string name="view_details">📋 View Details</string>
+    <string name="cancel">❌ Cancel</string>
+    <string name="approve">✓ Approve</string>
+    <string name="reject">✗ Reject</string>
+    
+    <!-- Details -->
+    <string name="details_title">Notification Details</string>
+    <string name="app">App</string>
+    <string name="package_name">Package</string>
+    <string name="title">Title</string>
+    <string name="text">Text</string>
+    <string name="date">Date</string>
+    <string name="status">Status</string>
+    <string name="webhook">Webhook</string>
+    <string name="rule_id">Rule ID</string>
+    <string name="not_sent">Not sent</string>
+    <string name="sending">Sending</string>
+    <string name="sent">Sent</string>
+    <string name="failed">Failed</string>
+    
+    <!-- Rules -->
+    <string name="rules">⚙️ Rules</string>
+    <string name="new_rule">➕ New</string>
+    <string name="active">✅ Active</string>
+    <string name="inactive">⚪ Inactive</string>
+    <string name="search_rules">🔍 Search rules...</string>
+    <string name="no_rules">No rules found.\nClick + to create one.</string>
+    <string name="any_app">Any app</string>
+    <string name="times">times</string>
+    <string name="last">Last</string>
+    <string name="never">never</string>
+    
+    <!-- Rule Menu -->
+    <string name="deactivate">❌ Deactivate</string>
+    <string name="activate">✅ Activate</string>
+    <string name="edit">✏️ Edit</string>
+    <string name="delete">🗑️ Delete</string>
+    <string name="duplicate">📋 Duplicate</string>
+    
+    <!-- Rule Creation -->
+    <string name="new_rule_title">✨ New Rule</string>
+    <string name="edit_rule_title">✏️ Edit Rule</string>
+    <string name="step_app">1. App</string>
+    <string name="step_conditions">2. Conditions</string>
+    <string name="step_action">3. Action</string>
+    <string name="step_review">4. Review</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="save">Save</string>
+    <string name="cancel_btn">Cancel</string>
+    
+    <!-- Step App -->
+    <string name="choose_app">Choose the app:</string>
+    <string name="specific_app">Specific app</string>
+    <string name="any_app_option">Any app</string>
+    <string name="selected_app">Selected app:</string>
+    <string name="package_hint">Package:</string>
+    
+    <!-- Step Conditions -->
+    <string name="conditions_title">Conditions (all apply)</string>
+    <string name="title_contains">Title contains:</string>
+    <string name="title_hint">e.g., invoice, alert, promotion</string>
+    <string name="text_contains">Text contains:</string>
+    <string name="text_hint">e.g., available, message, invite</string>
+    <string name="enable_time">Enable specific time</string>
+    <string name="time">Time:</string>
+    <string name="from">From</string>
+    <string name="to">to</string>
+    <string name="week_days">Week days:</string>
+    <string name="mon">Mon</string>
+    <string name="tue">Tue</string>
+    <string name="wed">Wed</string>
+    <string name="thu">Thu</string>
+    <string name="fri">Fri</string>
+    <string name="sat">Sat</string>
+    <string name="sun">Sun</string>
+    <string name="all">All</string>
+    <string name="notification_type">Notification type:</string>
+    <string name="any_type">Any type</string>
+    <string name="silent">🔇 Silent</string>
+    <string name="alerting">🔔 Alerting</string>
+    <string name="with_image">🖼️ With image</string>
+    
+    <!-- Step Action -->
+    <string name="choose_action">Choose the action:</string>
+    <string name="webhook_auto">🌐 Automatic Webhook</string>
+    <string name="webhook_auth">🔐 Webhook with Authorization</string>
+    <string name="webhook_url">Webhook URL:</string>
+    <string name="webhook_hint">https://example.com/webhook</string>
+    <string name="headers">Headers (optional, JSON format):</string>
+    <string name="headers_hint">{"Content-Type": "application/json"}</string>
+    <string name="webhook_tip">💡 You can use tools like webhook.site for testing</string>
+    
+    <!-- Step Review -->
+    <string name="review_title">Review your rule:</string>
+    <string name="rule_name">Rule name:</string>
+    <string name="name_hint">e.g., Gmail - Invoices</string>
+    <string name="activate_now">Activate rule immediately</string>
+    <string name="apply_to_current">✅ Apply this rule to the current notification</string>
+    <string name="no_conditions">No conditions</string>
+    
+    <!-- Dialogs -->
+    <string name="clear_title">Clear notifications</string>
+    <string name="clear_message">Are you sure you want to delete all notifications?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="process_title">Process Notification</string>
+    <string name="process_message">Do you want to submit this notification to be processed by existing rules?</string>
+    <string name="execute_title">Execute Rule</string>
+    <string name="execute_message">Do you want to execute the rule for this notification now?</string>
+    <string name="delete_rule_title">Delete rule</string>
+    <string name="delete_rule_message">Are you sure you want to delete the rule \'%s\'?</string>
+    
+    <!-- Toasts -->
+    <string name="list_updated">List updated</string>
+    <string name="notifications_deleted">Notifications deleted</string>
+    <string name="permission_granted">All permissions granted!</string>
+    <string name="permission_denied">Permissions denied</string>
+    <string name="notification_submitted">Notification submitted for processing</string>
+    <string name="rule_executed">Rule executed!</string>
+    <string name="rule_created">Rule created successfully!</string>
+    <string name="rule_updated">Rule updated successfully!</string>
+    <string name="rule_deleted">Rule deleted</string>
+    <string name="rule_activated">Rule activated</string>
+    <string name="rule_deactivated">Rule deactivated</string>
+    <string name="name_required">Rule name is required</string>
+    <string name="url_required">Webhook URL is required</string>
+    <string name="invalid_headers">Invalid headers. Use JSON format</string>
+    <string name="no_rules_found">No rules found</string>
+    
+    <!-- About -->
+    <string name="credits_title">About</string>
+    <string name="developed_by">Developed with ❤️ and</string>
+    <string name="deepseek">DeepSeek</string>
+    <string name="deepseek_rulez">DeepSeek Rulez!</string>
+    <string name="version">Version 1.0</string>
+</resources>

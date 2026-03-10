@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Escolha a app:"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <RadioGroup
+        android:id="@+id/rgAppChoice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <RadioButton
+            android:id="@+id/rbSpecificApp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="App específica"
+            android:checked="true"/>
+
+        <RadioButton
+            android:id="@+id/rbAnyApp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Qualquer app"/>
+    </RadioGroup>
+
+    <Spinner
+        android:id="@+id/spinnerApps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvSelectedApp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/tvPackageHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="visible"/>
+
+</LinearLayout>
