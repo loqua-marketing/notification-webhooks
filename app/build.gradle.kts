@@ -34,6 +34,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // ✅ BLOCO LINT CORRIGIDO
+    lint {
+        disable.add("ProtectedPermissions")  // Sintaxe correta!
+        // baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

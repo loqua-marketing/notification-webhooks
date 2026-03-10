@@ -1,5 +1,9 @@
 package com.seuapp.notificationautomator
 
+import com.seuapp.notificationautomator.data.repository.NotificationRepository
+import android.util.Log
+import com.seuapp.notificationautomator.ml.config.FeatureFlags
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,7 +20,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.seuapp.notificationautomator.utils.BackupManager
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     
@@ -40,8 +43,37 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         updatePermissionStatus()
+
+
+        // 🆕 INICIALIZAR ML EM BACKGROUND
+        initializeMLAsync()
     }
     
+    // 🆕 NOVO MÉTODO
+    private fun initializeMLAsync() {
+        if (!FeatureFlags.ML_ENABLED) return
+        
+        lifecycleScope.launch {
+            try {
+                // Obter instância do repository (precisas de uma forma de aceder)
+                // Isto depende de como tens o repository na app
+                // Se usares injeção ou singleton, ajusta conforme necessário
+                val repository = NotificationRepository(applicationContext)
+                repository.initializeML()
+                
+                if (FeatureFlags.ML_DEBUG) {
+                    Toast.makeText(this@MainActivity, "🤖 ML Service inicializado", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                if (FeatureFlags.ML_DEBUG) {
+                    Log.e("MainActivity", "❌ Erro ao inicializar ML", e)
+                }
+            }
+        }
+    }
+
+
+
     private fun initViews() {
         statusText = findViewById(R.id.statusText)
         btnCheckPermission = findViewById(R.id.btnCheckPermission)

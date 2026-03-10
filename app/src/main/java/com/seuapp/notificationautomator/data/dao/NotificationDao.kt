@@ -36,4 +36,13 @@ interface NotificationDao {
     
     @Query("SELECT COUNT(*) FROM notifications WHERE packageName = :packageName AND title = :title AND text = :text AND timestamp > :cutoffTime")
     suspend fun getRecentNotificationCount(packageName: String, title: String?, text: String?, cutoffTime: Long): Int
+
+    // 🆕 NOVO MÉTODO PARA ML
+    @Query("""
+        UPDATE notifications 
+        SET category = :category, 
+            categoryConfidence = :confidence 
+        WHERE id = :id
+    """)
+    suspend fun updateCategory(id: Long, category: String?, confidence: Float?)
 }

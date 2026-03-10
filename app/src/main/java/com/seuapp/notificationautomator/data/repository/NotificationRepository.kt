@@ -15,6 +15,8 @@ import com.seuapp.notificationautomator.data.model.Notification
 import com.seuapp.notificationautomator.data.model.NotificationStatus
 import com.seuapp.notificationautomator.data.model.Rule
 import com.seuapp.notificationautomator.data.model.WebhookStatus
+import com.seuapp.notificationautomator.ml.config.FeatureFlags
+import com.seuapp.notificationautomator.service.MLService
 import com.seuapp.notificationautomator.worker.WebhookWorker
 import kotlinx.coroutines.*
 import java.util.Calendar
@@ -30,6 +32,9 @@ class NotificationRepository(context: Context) {
     private val appContext = context.applicationContext
     private val TAG = "NotificationRepo"
     
+    // 🆕 ML Service
+    private var mlService: MLService? = null
+    
     private val _allNotifications = MutableLiveData<List<Notification>>()
     val allNotifications: LiveData<List<Notification>> = _allNotifications
     
@@ -37,6 +42,20 @@ class NotificationRepository(context: Context) {
     
     init {
         carregarNotificacoes()
+    }
+    
+    // 🆕 Inicializar ML
+    suspend fun initializeML() {
+        if (FeatureFlags.ML_ENABLED) {
+            mlService = MLService(appContext)
+            mlService?.initialize()
+        }
+    }
+    
+    // 🆕 Cleanup ML
+    fun cleanupML() {
+        mlService?.close()
+        mlService = null
     }
     
     fun carregarNotificacoes() {
@@ -94,10 +113,13 @@ class NotificationRepository(context: Context) {
                     packageName = packageName,
                     title = title,
                     text = text,
+                    timestamp = System.currentTimeMillis(),
                     status = statusInicial,
                     ruleId = regraAplicavel?.id,
                     webhookUrl = regraAplicavel?.webhookUrl,
-                    webhookStatus = if (regraAplicavel != null) WebhookStatus.PENDING else null
+                    webhookStatus = if (regraAplicavel != null) WebhookStatus.PENDING else null,
+                    category = null,
+                    categoryConfidence = null
                 )
                 
                 val id = notificationDao.insert(notification)
@@ -112,12 +134,37 @@ class NotificationRepository(context: Context) {
                     executarWebhook(regraAplicavel, notification.copy(id = id))
                 }
                 
+                // 🆕 Processar com ML em background
+                if (FeatureFlags.CLASSIFICATION_ENABLED) {
+                    processWithMLAsync(id, title, text)
+                }
+                
                 carregarNotificacoes()
                 Log.d(TAG, "==========================================")
                 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Erro ao processar notificação", e)
                 e.printStackTrace()
+            }
+        }
+    }
+    
+    // 🆕 Processar com ML em background
+    private fun processWithMLAsync(id: Long, title: String?, text: String?) {
+        coroutineScope.launch {
+            try {
+                mlService?.classifyNotificationAsync(id, title, text) { category, confidence ->
+                    launch {
+                        notificationDao.updateCategory(id, category, confidence)
+                        if (FeatureFlags.ML_DEBUG) {
+                            Log.d(TAG, "🤖 ML: Notificação $id classificada como $category ($confidence)")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (FeatureFlags.ML_DEBUG) {
+                    Log.e(TAG, "❌ Erro no ML async", e)
+                }
             }
         }
     }
@@ -338,7 +385,6 @@ class NotificationRepository(context: Context) {
         }
     }
     
-
     suspend fun getRecentNotificationCount(
         packageName: String,
         title: String?,
@@ -348,8 +394,7 @@ class NotificationRepository(context: Context) {
         val cutoffTime = System.currentTimeMillis() - timeWindowMs
         return notificationDao.getRecentNotificationCount(packageName, title, text, cutoffTime)
     }
-
-
+    
     suspend fun atualizarWebhookStatus(
         id: Long,
         webhookStatus: WebhookStatus,
