@@ -45,4 +45,12 @@ interface NotificationDao {
         WHERE id = :id
     """)
     suspend fun updateCategory(id: Long, category: String?, confidence: Float?)
+
+    @Query("""
+    SELECT * FROM notifications 
+    WHERE (category IS NULL OR category = '') 
+    AND timestamp > :since
+    ORDER BY timestamp DESC
+    """)
+    suspend fun getUnclassifiedRecentNotifications(since: Long): List<Notification>
 }

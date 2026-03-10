@@ -10,10 +10,10 @@ import android.os.Build
  */
 object FeatureFlags {
     // Master switch - tudo desligado
-    const val ML_ENABLED = false
+    const val ML_ENABLED = true
     
     // Features individuais (dependentes do master)
-    const val CLASSIFICATION_ENABLED = false
+    const val CLASSIFICATION_ENABLED = true
     const val SUGGESTIONS_ENABLED = false
     const val LEARNING_ENABLED = false
     

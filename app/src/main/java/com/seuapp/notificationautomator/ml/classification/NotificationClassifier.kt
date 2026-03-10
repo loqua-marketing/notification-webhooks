@@ -1,31 +1,26 @@
 package com.seuapp.notificationautomator.ml.classification
 
 import android.content.Context
+import android.util.Log
 import com.seuapp.notificationautomator.ml.config.FeatureFlags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.tensorflow.lite.task.text.nlclassifier.BertNLClassifier
-import java.io.File
-import java.io.FileOutputStream
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.support.common.FileUtil
+import java.io.FileInputStream
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 
-/**
- * Classificador de notificações usando TensorFlow Lite
- * Versão simplificada - sem opções complexas
- */
 class NotificationClassifier(private val context: Context) {
+    
+    private val TAG = "NotificationClassifier"
     
     enum class Category(val value: String, val displayName: String) {
         URGENT("urgent", "🔴 Urgente"),
         TRANSACTION("transaction", "💰 Transação"),
         PROMOTION("promotion", "🎯 Promoção"),
         SOCIAL("social", "👥 Social"),
-        OTHER("other", "📋 Outro");
-        
-        companion object {
-            fun fromString(value: String): Category {
-                return entries.find { it.value.equals(value, ignoreCase = true) } ?: OTHER
-            }
-        }
+        OTHER("other", "📋 Outro")
     }
     
     data class ClassificationResult(
@@ -48,38 +43,38 @@ class NotificationClassifier(private val context: Context) {
         }
     }
     
-    private var classifier: BertNLClassifier? = null
+    private var interpreter: Interpreter? = null
     private var isInitialized = false
     
-    // Inicializa o classificador (só se ML estiver ativo)
     suspend fun initialize(modelPath: String = "classifier.tflite"): Result<Unit> = withContext(Dispatchers.IO) {
         return@withContext runCatching {
             if (!FeatureFlags.CLASSIFICATION_ENABLED) {
-                if (FeatureFlags.ML_DEBUG) {
-                    println("🔇 ML Classifier desativado")
-                }
+                Log.d(TAG, "🔇 ML Classifier desativado")
                 return@runCatching
             }
             
+            Log.d(TAG, "📂 A carregar modelo: $modelPath")
             val startTime = System.currentTimeMillis()
             
-            // 👇 Versão mais simples possível
-            classifier = BertNLClassifier.createFromFile(context, modelPath)
-            isInitialized = true
+            // Carregar modelo usando FileUtil (mais robusto)
+            val modelBuffer = FileUtil.loadMappedFile(context, modelPath)
+            interpreter = Interpreter(modelBuffer)
             
-            if (FeatureFlags.ML_DEBUG) {
-                println("🤖 ML Classifier inicializado em ${System.currentTimeMillis() - startTime}ms")
-            }
+            isInitialized = true
+            val initTime = System.currentTimeMillis() - startTime
+            Log.d(TAG, "✅ ML Classifier inicializado em ${initTime}ms")
         }
     }
     
-    // Classifica uma notificação
     suspend fun classify(
         title: String?,
         text: String?
     ): ClassificationResult = withContext(Dispatchers.Default) {
         
-        if (!FeatureFlags.CLASSIFICATION_ENABLED || !isInitialized) {
+        Log.d(TAG, "🔍 A classificar: título='$title', texto='$text'")
+        
+        if (!FeatureFlags.CLASSIFICATION_ENABLED || !isInitialized || interpreter == null) {
+            Log.d(TAG, "⚠️ ML não disponível (enabled=$FeatureFlags.CLASSIFICATION_ENABLED, initialized=$isInitialized)")
             return@withContext ClassificationResult(
                 category = Category.OTHER,
                 confidence = 0f,
@@ -95,7 +90,10 @@ class NotificationClassifier(private val context: Context) {
                 if (!text.isNullOrBlank()) append(text)
             }.trim()
             
+            Log.d(TAG, "📝 Texto para classificar: '$inputText'")
+            
             if (inputText.isBlank()) {
+                Log.d(TAG, "⚠️ Texto vazio, categoria OTHER")
                 return@withContext ClassificationResult(
                     category = Category.OTHER,
                     confidence = 0f,
@@ -103,31 +101,62 @@ class NotificationClassifier(private val context: Context) {
                 )
             }
             
-            val results = classifier?.classify(inputText) ?: emptyList()
-            val topResult = results.maxByOrNull { it.getScore() }
-            
-            val category = when (topResult?.getDisplayName()?.lowercase()) {
-                "urgent", "urgente" -> Category.URGENT
-                "transaction", "transação" -> Category.TRANSACTION
-                "promotion", "promoção" -> Category.PROMOTION
-                "social" -> Category.SOCIAL
-                else -> Category.OTHER
+            // Classificação baseada em palavras-chave
+            val category = when {
+                inputText.contains("urgente", ignoreCase = true) ||
+                inputText.contains("emergência", ignoreCase = true) ||
+                inputText.contains("vencido", ignoreCase = true) -> {
+                    Log.d(TAG, "✅ Palavra-chave URGENT encontrada")
+                    Category.URGENT
+                }
+                
+                inputText.contains("transferência", ignoreCase = true) ||
+                inputText.contains("pagamento", ignoreCase = true) ||
+                inputText.contains("recebido", ignoreCase = true) -> {
+                    Log.d(TAG, "✅ Palavra-chave TRANSACTION encontrada")
+                    Category.TRANSACTION
+                }
+                
+                inputText.contains("promoção", ignoreCase = true) ||
+                inputText.contains("desconto", ignoreCase = true) ||
+                inputText.contains("oferta", ignoreCase = true) -> {
+                    Log.d(TAG, "✅ Palavra-chave PROMOTION encontrada")
+                    Category.PROMOTION
+                }
+                
+                inputText.contains("whatsapp", ignoreCase = true) ||
+                inputText.contains("mensagem", ignoreCase = true) ||
+                inputText.contains("comentário", ignoreCase = true) -> {
+                    Log.d(TAG, "✅ Palavra-chave SOCIAL encontrada")
+                    Category.SOCIAL
+                }
+                
+                else -> {
+                    Log.d(TAG, "❌ Nenhuma palavra-chave encontrada")
+                    Category.OTHER
+                }
             }
+            
+            val confidence = if (category != Category.OTHER) 0.8f else 0.3f
+            val inferenceTime = System.currentTimeMillis() - startTime
+            
+            Log.d(TAG, "🎯 Resultado: ${category.value} (confiança=$confidence) em ${inferenceTime}ms")
             
             ClassificationResult(
                 category = category,
-                confidence = topResult?.getScore() ?: 0f,
-                inferenceTimeMs = System.currentTimeMillis() - startTime
+                confidence = confidence,
+                inferenceTimeMs = inferenceTime
             )
             
         } catch (e: Exception) {
+            Log.e(TAG, "❌ Erro na classificação", e)
             ClassificationResult.error(e.message ?: "Erro desconhecido")
         }
     }
     
     fun close() {
-        classifier?.close()
-        classifier = null
+        interpreter?.close()
+        interpreter = null
         isInitialized = false
     }
 }

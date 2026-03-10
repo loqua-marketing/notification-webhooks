@@ -14,6 +14,10 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -35,10 +39,14 @@ android {
         jvmTarget = "17"
     }
 
-    // ✅ BLOCO LINT CORRIGIDO
     lint {
-        disable.add("ProtectedPermissions")  // Sintaxe correta!
-        // baseline = file("lint-baseline.xml")
+        disable.add("ProtectedPermissions")
+    }
+    
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -70,11 +78,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
-
-    // 🆕 TensorFlow Lite para Edge AI
-    implementation("org.tensorflow:tensorflow-lite:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-task-text:0.4.4")
+    // 🆕 TensorFlow Lite - versões mais estáveis
+    implementation("org.tensorflow:tensorflow-lite:2.10.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 }

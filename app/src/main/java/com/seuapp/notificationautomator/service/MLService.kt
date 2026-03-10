@@ -1,5 +1,6 @@
 package com.seuapp.notificationautomator.service
 
+import com.seuapp.notificationautomator.data.dao.NotificationDao
 import android.content.Context
 import android.util.Log
 import com.seuapp.notificationautomator.ml.classification.NotificationClassifier
@@ -13,13 +14,9 @@ class MLService(private val context: Context) {
     private var isInitialized = false
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
-    suspend fun initialize() {
+    suspend fun initialize(notificationDao: NotificationDao? = null) {
         // Verifica se ML está ativo
         if (!FeatureFlags.ML_ENABLED) {
-            // Debug comentado temporariamente
-            // if (FeatureFlags.ML_DEBUG) {
-            //     Log.d(TAG, "🔇 ML Service desativado")
-            // }
             return
         }
         
@@ -28,16 +25,21 @@ class MLService(private val context: Context) {
             try {
                 classifier.initialize()
                 isInitialized = true
-                // Debug comentado
-                // if (FeatureFlags.ML_DEBUG) {
-                //     Log.d(TAG, "🤖 ML Service inicializado")
-                // }
+                if (FeatureFlags.ML_DEBUG) {
+                    Log.d(TAG, "🤖 ML Service inicializado")
+                }
+                
+                // Reprocessar notificações se tivermos o DAO
+                notificationDao?.let {
+                    reprocessRecentNotifications(it)
+                }
+                
             } catch (e: Exception) {
-                // Log.e(TAG, "❌ Erro ao inicializar ML: ${e.message}")
+                Log.e(TAG, "❌ Erro ao inicializar ML: ${e.message}")
             }
         }
     }
-    
+
     fun classifyNotificationAsync(
         id: Long,
         title: String?,
@@ -45,8 +47,16 @@ class MLService(private val context: Context) {
         onResult: (String?, Float?) -> Unit
     ) {
         // Early returns
-        if (!FeatureFlags.CLASSIFICATION_ENABLED) return
-        if (!isInitialized) return
+        if (!FeatureFlags.CLASSIFICATION_ENABLED) {
+            Log.d(TAG, "⚠️ CLASSIFICATION_ENABLED = false")
+            return
+        }
+        if (!isInitialized) {
+            Log.d(TAG, "⚠️ ML não inicializado")
+            return
+        }
+        
+        Log.d(TAG, "🚀 A classificar notificação $id em background")
         
         coroutineScope.launch {
             try {
@@ -56,16 +66,18 @@ class MLService(private val context: Context) {
                     withContext(Dispatchers.Main) {
                         onResult(result.category.value, result.confidence)
                     }
-                    // Debug comentado
-                    // if (FeatureFlags.ML_DEBUG) {
-                    //     Log.d(TAG, "🤖 Notificação $id: ${result.category.value} (${result.confidence})")
-                    // }
+                    // 🔥 LOG ATIVADO
+                    if (FeatureFlags.ML_DEBUG) {
+                        Log.d(TAG, "🤖 Notificação $id: ${result.category.value} (${result.confidence})")
+                    }
+                } else {
+                    Log.d(TAG, "⚠️ Confiança baixa ou erro: ${result.confidence}")
                 }
             } catch (e: Exception) {
-                // Debug comentado
-                // if (FeatureFlags.ML_DEBUG) {
-                //     Log.e(TAG, "❌ Erro: ${e.message}")
-                // }
+                // 🔥 LOG ATIVADO
+                if (FeatureFlags.ML_DEBUG) {
+                    Log.e(TAG, "❌ Erro: ${e.message}")
+                }
             }
         }
     }
@@ -87,5 +99,38 @@ class MLService(private val context: Context) {
     fun close() {
         classifier.close()
         coroutineScope.cancel()
+    }
+    // Adicionar no final da classe MLService.kt
+
+    /**
+     * Reprocessa notificações recentes que não têm categoria ML
+     */
+    fun reprocessRecentNotifications(notificationDao: NotificationDao) {
+        if (!FeatureFlags.CLASSIFICATION_ENABLED || !isInitialized) return
+        
+        Log.d(TAG, "🔄 A reprocessar notificações recentes sem ML...")
+        
+        coroutineScope.launch {
+            try {
+                // Buscar notificações sem categoria dos últimos 5 minutos
+                val fiveMinutesAgo = System.currentTimeMillis() - (5 * 60 * 1000)
+                val notifications = notificationDao.getUnclassifiedRecentNotifications(fiveMinutesAgo)
+                
+                Log.d(TAG, "📊 Encontradas ${notifications.size} notificações para reprocessar")
+                
+                notifications.forEach { notification ->
+                    classifyNotificationAsync(
+                        notification.id,
+                        notification.title,
+                        notification.text
+                    ) { category, confidence ->
+                        // Atualizar a notificação (já é feito no classifyNotificationAsync)
+                        Log.d(TAG, "🔄 Reprocessada notificação ${notification.id}: $category ($confidence)")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Erro ao reprocessar notificações", e)
+            }
+        }
     }
 }

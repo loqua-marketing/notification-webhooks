@@ -43,31 +43,22 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         updatePermissionStatus()
-
-
-        // 🆕 INICIALIZAR ML EM BACKGROUND
+        
+        // 🆕 INICIALIZAR ML O MAIS CEDO POSSÍVEL
         initializeMLAsync()
     }
-    
-    // 🆕 NOVO MÉTODO
+
     private fun initializeMLAsync() {
         if (!FeatureFlags.ML_ENABLED) return
         
         lifecycleScope.launch {
             try {
-                // Obter instância do repository (precisas de uma forma de aceder)
-                // Isto depende de como tens o repository na app
-                // Se usares injeção ou singleton, ajusta conforme necessário
+                Log.d("MainActivity", "🚀 A inicializar ML...")
                 val repository = NotificationRepository(applicationContext)
                 repository.initializeML()
-                
-                if (FeatureFlags.ML_DEBUG) {
-                    Toast.makeText(this@MainActivity, "🤖 ML Service inicializado", Toast.LENGTH_SHORT).show()
-                }
+                Log.d("MainActivity", "✅ ML inicializado com sucesso")
             } catch (e: Exception) {
-                if (FeatureFlags.ML_DEBUG) {
-                    Log.e("MainActivity", "❌ Erro ao inicializar ML", e)
-                }
+                Log.e("MainActivity", "❌ Erro ao inicializar ML", e)
             }
         }
     }

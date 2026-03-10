@@ -48,7 +48,7 @@ class NotificationRepository(context: Context) {
     suspend fun initializeML() {
         if (FeatureFlags.ML_ENABLED) {
             mlService = MLService(appContext)
-            mlService?.initialize()
+            mlService?.initialize(notificationDao)  // 👈 Passar o DAO
         }
     }
     
@@ -123,6 +123,15 @@ class NotificationRepository(context: Context) {
                 )
                 
                 val id = notificationDao.insert(notification)
+                // Depois de: val id = notificationDao.insert(notification)
+                Log.d(TAG, "🔍 VERIFICANDO ML: CLASSIFICATION_ENABLED=${FeatureFlags.CLASSIFICATION_ENABLED}")
+
+                if (FeatureFlags.CLASSIFICATION_ENABLED) {
+                    Log.d(TAG, "🚀 Vai chamar processWithMLAsync para id=$id")
+                    processWithMLAsync(id, title, text)
+                } else {
+                    Log.d(TAG, "❌ CLASSIFICATION_ENABLED = false, ML ignorado")
+                }
                 Log.d(TAG, "💾 Notificação guardada com ID: $id, Status: $statusInicial")
                 
                 regraAplicavel?.let {
@@ -134,10 +143,6 @@ class NotificationRepository(context: Context) {
                     executarWebhook(regraAplicavel, notification.copy(id = id))
                 }
                 
-                // 🆕 Processar com ML em background
-                if (FeatureFlags.CLASSIFICATION_ENABLED) {
-                    processWithMLAsync(id, title, text)
-                }
                 
                 carregarNotificacoes()
                 Log.d(TAG, "==========================================")
