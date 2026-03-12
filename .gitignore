@@ -34,3 +34,6 @@ signing.properties
 *.tflite
 *.lite
 /assets/*.tflite
+
+.opencode/
+opencode.jsonc

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "NotificationAutomator",
+    "createdAt": 1773306381998,
+    "preset": "minimal"
+  },
+  "authorizedRoots": [
+    "/home/phill/Android/NotificationAutomator"
+  ]
+}

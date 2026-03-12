@@ -35,20 +35,57 @@ class NotificationRepository(context: Context) {
     // 🆕 ML Service
     private var mlService: MLService? = null
     
-    private val _allNotifications = MutableLiveData<List<Notification>>()
-    val allNotifications: LiveData<List<Notification>> = _allNotifications
+    // Propriedades para paginação
+    private val PAGE_SIZE = 25
+    private var _currentPage = 0
+    private var _hasMorePages = true
+    private var _totalNotifications = 0
+    
+    // LiveData para a UI
+    private val _paginatedNotifications = MutableLiveData<List<Notification>>()
+    val paginatedNotifications: LiveData<List<Notification>> = _paginatedNotifications
+    
+    private val _isLoadingMore = MutableLiveData(false)
+    val isLoadingMore: LiveData<Boolean> = _isLoadingMore
+    
+    private val _hasMore = MutableLiveData(true)
+    val hasMore: LiveData<Boolean> = _hasMore
+    
+    // Estado atual do filtro
+    private var currentFilterType: FilterType = FilterType.ALL_VISIBLE
     
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    init {
-        carregarNotificacoes()
+    // LiveData antiga (para compatibilidade)
+    private val _allNotifications = MutableLiveData<List<Notification>>()
+    val allNotifications: LiveData<List<Notification>> = _allNotifications
+    
+    // Enum para os novos filtros
+    enum class FilterType {
+        ALL_VISIBLE,        // 📥 Todas (exceto ocultas)
+        PENDING,            // ⏳ Pendentes (PENDING_AUTH)
+        AUTOMATIC,          // 🤖 Automáticas (AUTO_SUCCESS + AUTO_ERROR)
+        HIDDEN,             // 🙈 Ocultas
+        WEBHOOK_SUCCESS,    // 🌐 Sucesso
+        WEBHOOK_ERROR,      // ⚠️ Erro
+        APPROVED,           // ✅ Aprovadas (APPROVED_SUCCESS + APPROVED_ERROR)
+        REJECTED            // ❌ Rejeitadas
     }
     
+    init {
+        // Inicializar com primeira página
+        carregarPrimeiraPagina(FilterType.ALL_VISIBLE)
+
+        // Debug: mostrar estatísticas da BD
+        coroutineScope.launch {
+        debugDatabaseStats()
+        }
+    }
     // 🆕 Inicializar ML
     suspend fun initializeML() {
         if (FeatureFlags.ML_ENABLED) {
             mlService = MLService(appContext)
-            mlService?.initialize(notificationDao)  // 👈 Passar o DAO
+            mlService?.initialize(notificationDao)
         }
     }
     
@@ -58,16 +95,185 @@ class NotificationRepository(context: Context) {
         mlService = null
     }
     
-    fun carregarNotificacoes() {
+    // ===== MÉTODOS DE PAGINAÇÃO =====
+    
+    fun carregarPrimeiraPagina(filterType: FilterType) {
+        _currentPage = 0
+        _hasMorePages = true
+        currentFilterType = filterType
+        carregarPagina(0, filterType)
+    }
+    
+    fun carregarProximaPagina() {
+        if (!_hasMorePages || _isLoadingMore.value == true) return
+        carregarPagina(_currentPage + 1, currentFilterType)
+    }
+    
+    private fun carregarPagina(page: Int, filterType: FilterType) {
         coroutineScope.launch {
             try {
-                val notifications = notificationDao.getAllNotifications()
-                _allNotifications.postValue(notifications)
+                    _isLoadingMore.postValue(true)
+
+                val offset = page * PAGE_SIZE
+                val notifications = when (filterType) {
+                    FilterType.ALL_VISIBLE -> 
+                        notificationDao.getVisibleNotificationsPaginated(PAGE_SIZE, offset)
+                    
+                    FilterType.PENDING -> 
+                        notificationDao.getByStatusPaginated(NotificationStatus.PENDING_AUTH.name, PAGE_SIZE, offset)
+                    
+                    FilterType.AUTOMATIC -> 
+                        notificationDao.getByMultipleStatusesPaginated(
+                            listOf(NotificationStatus.AUTO_SUCCESS.name, NotificationStatus.AUTO_ERROR.name),
+                            PAGE_SIZE, offset
+                        )
+                    
+                    FilterType.HIDDEN -> 
+                        notificationDao.getHiddenNotificationsPaginated(PAGE_SIZE, offset)
+                    
+                    FilterType.WEBHOOK_SUCCESS -> 
+                        notificationDao.getByWebhookStatusPaginated(WebhookStatus.SUCCESS.name, PAGE_SIZE, offset)
+                    
+                    FilterType.WEBHOOK_ERROR -> 
+                        notificationDao.getByWebhookStatusPaginated(WebhookStatus.FAILED.name, PAGE_SIZE, offset)
+                    
+                    FilterType.APPROVED -> 
+                        notificationDao.getByMultipleStatusesPaginated(
+                            listOf(NotificationStatus.APPROVED_SUCCESS.name, NotificationStatus.APPROVED_ERROR.name),
+                            PAGE_SIZE, offset
+                        )
+                    
+                    FilterType.REJECTED -> 
+                        notificationDao.getByStatusPaginated(NotificationStatus.REJECTED.name, PAGE_SIZE, offset)
+                }
+                
+                _totalNotifications = when (filterType) {
+                    FilterType.ALL_VISIBLE -> notificationDao.getVisibleCount()
+                    FilterType.PENDING -> notificationDao.getCountByStatus(NotificationStatus.PENDING_AUTH.name)
+                    FilterType.AUTOMATIC -> notificationDao.getCountByMultipleStatuses(
+                        listOf(NotificationStatus.AUTO_SUCCESS.name, NotificationStatus.AUTO_ERROR.name)
+                    )
+                    FilterType.HIDDEN -> notificationDao.getHiddenCount()
+                    FilterType.WEBHOOK_SUCCESS -> notificationDao.getCountByWebhookStatus(WebhookStatus.SUCCESS.name)
+                    FilterType.WEBHOOK_ERROR -> notificationDao.getCountByWebhookStatus(WebhookStatus.FAILED.name)
+                    FilterType.APPROVED -> notificationDao.getCountByMultipleStatuses(
+                        listOf(NotificationStatus.APPROVED_SUCCESS.name, NotificationStatus.APPROVED_ERROR.name)
+                    )
+                    FilterType.REJECTED -> notificationDao.getCountByStatus(NotificationStatus.REJECTED.name)
+                }
+                
+                _hasMorePages = (offset + PAGE_SIZE) < _totalNotifications
+                _hasMore.postValue(_hasMorePages)
+                
+                if (page == 0) {
+                    _paginatedNotifications.postValue(notifications)
+                } else {
+                    val currentList = _paginatedNotifications.value?.toMutableList() ?: mutableListOf()
+                    currentList.addAll(notifications)
+                    _paginatedNotifications.postValue(currentList)
+                }
+                
+                _currentPage = page
+                
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Erro ao carregar página $page", e)
+            } finally {
+                _isLoadingMore.postValue(false)
             }
         }
     }
+    
+    fun resetPagination() {
+        _currentPage = 0
+        _hasMorePages = true
+        currentFilterType = FilterType.ALL_VISIBLE
+        _paginatedNotifications.postValue(emptyList())
+    }
+    
+    // ===== MÉTODOS PARA LIMPAR POR FILTRO =====
+    
+    fun limparNotificacoesDoFiltroAtual() {
+        coroutineScope.launch {
+            try {
+                when (currentFilterType) {
+                    FilterType.ALL_VISIBLE -> notificationDao.deleteAllVisible()
+                    FilterType.PENDING -> notificationDao.deleteByStatus(NotificationStatus.PENDING_AUTH.name)
+                    FilterType.AUTOMATIC -> {
+                        notificationDao.deleteByStatus(NotificationStatus.AUTO_SUCCESS.name)
+                        notificationDao.deleteByStatus(NotificationStatus.AUTO_ERROR.name)
+                    }
+                    FilterType.HIDDEN -> notificationDao.deleteAllHidden()
+                    FilterType.WEBHOOK_SUCCESS -> notificationDao.deleteByWebhookStatus(WebhookStatus.SUCCESS.name)
+                    FilterType.WEBHOOK_ERROR -> notificationDao.deleteByWebhookStatus(WebhookStatus.FAILED.name)
+                    FilterType.APPROVED -> {
+                        notificationDao.deleteByStatus(NotificationStatus.APPROVED_SUCCESS.name)
+                        notificationDao.deleteByStatus(NotificationStatus.APPROVED_ERROR.name)
+                    }
+                    FilterType.REJECTED -> notificationDao.deleteByStatus(NotificationStatus.REJECTED.name)
+                }
+                
+                // Recarregar primeira página após limpar
+                carregarPrimeiraPagina(currentFilterType)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao limpar notificações", e)
+            }
+        }
+    }
+    
+    // ===== MÉTODO PARA OCULTAR NOTIFICAÇÕES SIMILARES =====
+    
+    suspend fun hideSimilarNotifications(packageName: String, title: String?) {
+        try {
+            notificationDao.hideSimilarNotifications(packageName, title)
+            // Recarregar a página atual
+            carregarPrimeiraPagina(currentFilterType)
+            Log.d(TAG, "🙈 Notificações similares ocultadas: $packageName - $title")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao ocultar notificações", e)
+        }
+    }
+    
+    // ===== MÉTODO PARA ATUALIZAR STATUS (com base no webhook) =====
+    
+    suspend fun atualizarStatusAposWebhook(id: Long, webhookStatus: WebhookStatus, error: String? = null) {
+        try {
+            val notification = notificationDao.getNotificationById(id) ?: return
+            
+            val novoStatus = when {
+                // Se era pendente de aprovação e webhook成功
+                notification.status == NotificationStatus.PENDING_AUTH && webhookStatus == WebhookStatus.SUCCESS ->
+                    NotificationStatus.APPROVED_SUCCESS
+                
+                notification.status == NotificationStatus.PENDING_AUTH && webhookStatus == WebhookStatus.FAILED ->
+                    NotificationStatus.APPROVED_ERROR
+                
+                // Se era automática
+                notification.status == NotificationStatus.PROCESSED && webhookStatus == WebhookStatus.SUCCESS ->
+                    NotificationStatus.AUTO_SUCCESS
+                
+                notification.status == NotificationStatus.PROCESSED && webhookStatus == WebhookStatus.FAILED ->
+                    NotificationStatus.AUTO_ERROR
+                
+                // Se não se encaixa nos casos acima, manter o status
+                else -> notification.status
+            }
+            
+            notificationDao.update(notification.copy(
+                status = novoStatus,
+                webhookStatus = webhookStatus,
+                webhookError = error
+            ))
+            
+            // Recarregar a lista
+            carregarPrimeiraPagina(currentFilterType)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao atualizar status após webhook", e)
+        }
+    }
+    
+    // ===== MÉTODO INSERT NOTIFICATION (ATUALIZADO) =====
     
     fun insertNotification(
         packageName: String,
@@ -85,11 +291,6 @@ class NotificationRepository(context: Context) {
                 val regras = ruleDao.getActiveRulesSync()
                 Log.d(TAG, "📋 Regras ativas: ${regras.size}")
                 
-                // Listar todas as regras para debug
-                regras.forEachIndexed { index, rule ->
-                    Log.d(TAG, "   Regra $index: ${rule.name} - Package: ${rule.appPackage ?: "QUALQUER APP"}")
-                }
-                
                 val regraAplicavel = encontrarRegraAplicavel(packageName, title, text, regras)
                 
                 val statusInicial = if (regraAplicavel != null) {
@@ -97,7 +298,7 @@ class NotificationRepository(context: Context) {
                     when (regraAplicavel.actionType) {
                         ActionType.WEBHOOK_AUTO -> {
                             Log.d(TAG, "⚡ Ação: Webhook Automático")
-                            NotificationStatus.PROCESSED
+                            NotificationStatus.PROCESSED  // Vai ser atualizado depois do webhook
                         }
                         ActionType.WEBHOOK_AUTH -> {
                             Log.d(TAG, "🔐 Ação: Webhook com Autorização")
@@ -119,19 +320,16 @@ class NotificationRepository(context: Context) {
                     webhookUrl = regraAplicavel?.webhookUrl,
                     webhookStatus = if (regraAplicavel != null) WebhookStatus.PENDING else null,
                     category = null,
-                    categoryConfidence = null
+                    categoryConfidence = null,
+                    isHidden = false
                 )
                 
                 val id = notificationDao.insert(notification)
-                // Depois de: val id = notificationDao.insert(notification)
-                Log.d(TAG, "🔍 VERIFICANDO ML: CLASSIFICATION_ENABLED=${FeatureFlags.CLASSIFICATION_ENABLED}")
-
+                
                 if (FeatureFlags.CLASSIFICATION_ENABLED) {
-                    Log.d(TAG, "🚀 Vai chamar processWithMLAsync para id=$id")
                     processWithMLAsync(id, title, text)
-                } else {
-                    Log.d(TAG, "❌ CLASSIFICATION_ENABLED = false, ML ignorado")
                 }
+                
                 Log.d(TAG, "💾 Notificação guardada com ID: $id, Status: $statusInicial")
                 
                 regraAplicavel?.let {
@@ -143,8 +341,8 @@ class NotificationRepository(context: Context) {
                     executarWebhook(regraAplicavel, notification.copy(id = id))
                 }
                 
-                
-                carregarNotificacoes()
+                // Recarregar a primeira página do filtro atual
+                carregarPrimeiraPagina(currentFilterType)
                 Log.d(TAG, "==========================================")
                 
             } catch (e: Exception) {
@@ -154,7 +352,8 @@ class NotificationRepository(context: Context) {
         }
     }
     
-    // 🆕 Processar com ML em background
+    // ===== MÉTODOS EXISTENTES (MANTER) =====
+    
     private fun processWithMLAsync(id: Long, title: String?, text: String?) {
         coroutineScope.launch {
             try {
@@ -189,7 +388,6 @@ class NotificationRepository(context: Context) {
             var matches = true
             val matchDetails = mutableListOf<String>()
             
-            // Verificar package
             if (regra.appPackage != null) {
                 val packageMatch = regra.appPackage == packageName
                 matches = matches && packageMatch
@@ -198,7 +396,6 @@ class NotificationRepository(context: Context) {
                 matchDetails.add("Package: QUALQUER APP")
             }
             
-            // Verificar título
             if (regra.titleContains != null && title != null) {
                 val titleMatch = title.contains(regra.titleContains, ignoreCase = true)
                 matches = matches && titleMatch
@@ -208,7 +405,6 @@ class NotificationRepository(context: Context) {
                 matchDetails.add("Título contém '${regra.titleContains}'? false (título nulo)")
             }
             
-            // Verificar texto
             if (regra.textContains != null && text != null) {
                 val textMatch = text.contains(regra.textContains, ignoreCase = true)
                 matches = matches && textMatch
@@ -218,7 +414,6 @@ class NotificationRepository(context: Context) {
                 matchDetails.add("Texto contém '${regra.textContains}'? false (texto nulo)")
             }
             
-            // Verificar horário
             if (regra.hourFrom != null && regra.hourTo != null) {
                 val calendar = Calendar.getInstance()
                 val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -236,7 +431,6 @@ class NotificationRepository(context: Context) {
                 matchDetails.add("Horário $currentTime entre $fromTime-$toTime? $timeMatch")
             }
             
-            // Verificar dias da semana
             if (regra.daysOfWeek != null) {
                 val calendar = Calendar.getInstance()
                 val currentDay = when (calendar.get(Calendar.DAY_OF_WEEK)) {
@@ -300,11 +494,15 @@ class NotificationRepository(context: Context) {
         try {
             Log.d(TAG, "✅ Aprovando notificação ${notification.id}")
             val rule = ruleDao.getRuleById(notification.ruleId ?: return)
-            notificationDao.update(notification.copy(status = NotificationStatus.APPROVED))
+            
+            // Atualizar status para PENDING_AUTH (vai ser atualizado depois do webhook)
+            notificationDao.update(notification.copy(status = NotificationStatus.PENDING_AUTH))
+            
             rule?.let {
                 executarWebhook(it, notification)
             }
-            carregarNotificacoes()
+            
+            carregarPrimeiraPagina(currentFilterType)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -314,7 +512,7 @@ class NotificationRepository(context: Context) {
         try {
             Log.d(TAG, "❌ Rejeitando notificação ${notification.id}")
             notificationDao.update(notification.copy(status = NotificationStatus.REJECTED))
-            carregarNotificacoes()
+            carregarPrimeiraPagina(currentFilterType)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -353,14 +551,8 @@ class NotificationRepository(context: Context) {
                 Log.d(TAG, "✅ Regra encontrada: ${regraAplicavel.name}")
                 
                 val novoStatus = when (regraAplicavel.actionType) {
-                    ActionType.WEBHOOK_AUTO -> {
-                        Log.d(TAG, "⚡ Ação: Webhook Automático")
-                        NotificationStatus.PROCESSED
-                    }
-                    ActionType.WEBHOOK_AUTH -> {
-                        Log.d(TAG, "🔐 Ação: Webhook com Autorização")
-                        NotificationStatus.PENDING_AUTH
-                    }
+                    ActionType.WEBHOOK_AUTO -> NotificationStatus.PROCESSED
+                    ActionType.WEBHOOK_AUTH -> NotificationStatus.PENDING_AUTH
                 }
                 
                 notificationDao.update(notification.copy(
@@ -383,7 +575,7 @@ class NotificationRepository(context: Context) {
                 Toast.makeText(appContext, "Nenhuma regra encontrada", Toast.LENGTH_SHORT).show()
             }
             
-            carregarNotificacoes()
+            carregarPrimeiraPagina(currentFilterType)
         } catch (e: Exception) {
             Log.e(TAG, "❌ Erro ao processar notificação", e)
             e.printStackTrace()
@@ -400,6 +592,54 @@ class NotificationRepository(context: Context) {
         return notificationDao.getRecentNotificationCount(packageName, title, text, cutoffTime)
     }
     
+    
+    suspend fun mostrarNotificacoesIguais(packageName: String, title: String?) {
+        try {
+            // Atualizar isHidden = 0 para todas as notificações com este package/title
+            notificationDao.mostrarNotificacoesIguais(packageName, title)
+            // Recarregar a página atual
+            carregarPrimeiraPagina(currentFilterType)
+            Log.d(TAG, "👁️ Notificações similares mostradas novamente: $packageName - $title")
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao mostrar notificações", e)
+        }
+    }
+
+
+
+    suspend fun getVisibleCount(): Int {
+        val count = notificationDao.getVisibleCount()
+        Log.d("NotificationRepo", "📊 getVisibleCount = $count")
+        return count
+    }
+
+    suspend fun getCountByStatus(status: String): Int {
+        val count = notificationDao.getCountByStatus(status)
+        Log.d("NotificationRepo", "📊 getCountByStatus($status) = $count")
+        return count
+    }
+
+    suspend fun getCountByMultipleStatuses(statuses: List<String>): Int {
+        val count = notificationDao.getCountByMultipleStatuses(statuses)
+        Log.d("NotificationRepo", "📊 getCountByMultipleStatuses($statuses) = $count")
+        return count
+    }
+
+    suspend fun getHiddenCount(): Int {
+        val count = notificationDao.getHiddenCount()
+        Log.d("NotificationRepo", "📊 getHiddenCount = $count")
+        return count
+    }
+
+    suspend fun getCountByWebhookStatus(webhookStatus: String): Int {
+        val count = notificationDao.getCountByWebhookStatus(webhookStatus)
+        Log.d("NotificationRepo", "📊 getCountByWebhookStatus($webhookStatus) = $count")
+        return count
+    }
+
+
+
+
     suspend fun atualizarWebhookStatus(
         id: Long,
         webhookStatus: WebhookStatus,
@@ -409,28 +649,51 @@ class NotificationRepository(context: Context) {
         try {
             val notification = notificationDao.getNotificationById(id)
             notification?.let {
-                notificationDao.update(it.copy(
-                    webhookStatus = webhookStatus,
-                    webhookResponse = response,
-                    webhookError = error
-                ))
-                if (webhookStatus == WebhookStatus.FAILED) {
-                    notificationDao.update(it.copy(status = NotificationStatus.ERROR))
-                }
-                carregarNotificacoes()
+                // Usar o novo método que atualiza o status baseado no webhook
+                atualizarStatusAposWebhook(id, webhookStatus, error)
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
     
+    suspend fun debugDatabaseStats() {
+        try {
+            val total = notificationDao.getVisibleCount()
+            val pending = notificationDao.getCountByStatus(NotificationStatus.PENDING_AUTH.name)
+            val auto = notificationDao.getCountByMultipleStatuses(
+                listOf(NotificationStatus.AUTO_SUCCESS.name, NotificationStatus.AUTO_ERROR.name)
+            )
+            val hidden = notificationDao.getHiddenCount()
+            
+            Log.d(TAG, "📊 DATABASE STATS:")
+            Log.d(TAG, "   TOTAL VISÍVEIS: $total")
+            Log.d(TAG, "   PENDING: $pending")
+            Log.d(TAG, "   AUTO: $auto")
+            Log.d(TAG, "   HIDDEN: $hidden")
+            
+            // Listar as primeiras 5 notificações para debug
+            val sample = notificationDao.getVisibleNotificationsPaginated(5, 0)
+            Log.d(TAG, "📋 AMOSTRA (primeiras 5):")
+            sample.forEachIndexed { index, notif ->
+                Log.d(TAG, "   $index: id=${notif.id}, title=${notif.title}, status=${notif.status}, hidden=${notif.isHidden}")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao fazer debug DB", e)
+        }
+    }
+
+
+
+
     fun updateNotificationStatus(id: Long, status: NotificationStatus) {
         coroutineScope.launch {
             try {
                 val notification = notificationDao.getNotificationById(id)
                 if (notification != null) {
                     notificationDao.update(notification.copy(status = status))
-                    carregarNotificacoes()
+                    carregarPrimeiraPagina(currentFilterType)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -441,7 +704,7 @@ class NotificationRepository(context: Context) {
     fun getNotificationCount(): Int {
         return runBlocking {
             try {
-                notificationDao.getCount()
+                notificationDao.getVisibleCount()
             } catch (e: Exception) {
                 0
             }
@@ -453,7 +716,7 @@ class NotificationRepository(context: Context) {
             try {
                 val cutoffTime = System.currentTimeMillis() - (daysToKeep * 24 * 60 * 60 * 1000)
                 notificationDao.deleteOldNotifications(cutoffTime)
-                carregarNotificacoes()
+                carregarPrimeiraPagina(currentFilterType)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -463,9 +726,9 @@ class NotificationRepository(context: Context) {
     fun clearAllNotifications() {
         coroutineScope.launch {
             try {
-                val notifications = notificationDao.getAllNotifications()
-                notifications.forEach { notificationDao.delete(it) }
-                carregarNotificacoes()
+                notificationDao.deleteAllVisible()
+                notificationDao.deleteAllHidden()
+                carregarPrimeiraPagina(FilterType.ALL_VISIBLE)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

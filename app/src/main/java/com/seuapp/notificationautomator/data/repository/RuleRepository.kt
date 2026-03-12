@@ -1,11 +1,13 @@
 package com.seuapp.notificationautomator.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.seuapp.notificationautomator.data.dao.RuleDao
 import com.seuapp.notificationautomator.data.database.AppDatabase
 import com.seuapp.notificationautomator.data.model.ActionType
+import com.seuapp.notificationautomator.data.model.NotificationStatus
 import com.seuapp.notificationautomator.data.model.Rule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +19,11 @@ class RuleRepository(context: Context) {
     
     private val database: AppDatabase = AppDatabase.getInstance(context)
     private val ruleDao: RuleDao = database.ruleDao()
+    
+    // 🆕 Adicionar referência ao NotificationRepository
+    private val notificationRepository: NotificationRepository = NotificationRepository(context)
+    
+    private val TAG = "RuleRepository"
     
     // Flow para observar mudanças
     val allRules: Flow<List<Rule>> = ruleDao.getAllRules()
@@ -34,11 +41,9 @@ class RuleRepository(context: Context) {
         ruleDao.update(rule)
     }
 
-
     suspend fun getAllRulesSync(): List<Rule> {
         return ruleDao.getAllRulesSync()
     }
-    
     
     suspend fun deleteRule(rule: Rule) {
         ruleDao.delete(rule)
@@ -66,10 +71,51 @@ class RuleRepository(context: Context) {
         return runBlocking { ruleDao.getTotalCount() }
     }
     
+    /**
+     * Aplica uma regra recém-criada a uma notificação específica.
+     * Usa a lógica existente no NotificationRepository para processar a notificação.
+     */
     suspend fun applyRuleToNotification(rule: Rule, notificationId: Long) {
-        // Este método será implementado quando necessário
-        // Por agora, apenas registamos
-        println("Aplicar regra ${rule.id} à notificação $notificationId")
+        Log.d(TAG, "🚀 applyRuleToNotification: rule=${rule.id}, notification=$notificationId")
+        
+        try {
+            // 1. Buscar a notificação pelo ID
+            val notification = notificationRepository.getNotificationById(notificationId)
+            
+            if (notification == null) {
+                Log.e(TAG, "❌ Notificação $notificationId não encontrada")
+                return
+            }
+            
+            Log.d(TAG, "📦 Notificação encontrada: ${notification.id} - ${notification.title}")
+            
+            // 2. Verificar se a notificação já foi processada
+            if (notification.status != NotificationStatus.RECEIVED) {
+                Log.d(TAG, "⚠️ Notificação já processada (status=${notification.status}). Ignorando.")
+                return
+            }
+            
+            // 3. Atualizar a notificação com os dados da regra
+            val notificationAtualizada = notification.copy(
+                ruleId = rule.id,
+                webhookUrl = rule.webhookUrl,
+                webhookStatus = null, // Será definido pelo processarNotificacao
+                status = NotificationStatus.RECEIVED // Manter RECEIVED para processamento
+            )
+            
+            // 4. Usar o processarNotificacao existente que já tem toda a lógica
+            // (incluindo webhook, atualização de status, incremento de contador)
+            notificationRepository.processarNotificacao(notificationAtualizada)
+
+            // 👇 NOVO: Forçar atualização da lista de notificações
+            // O método antigo carregarNotificacoes foi substituído por carregarPrimeiraPagina
+            notificationRepository.carregarPrimeiraPagina(NotificationRepository.FilterType.ALL_VISIBLE)
+
+            Log.d(TAG, "✅ Regra ${rule.id} aplicada à notificação $notificationId")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Erro ao aplicar regra à notificação", e)
+        }
     }
     
     // Para debugging: criar regras de exemplo

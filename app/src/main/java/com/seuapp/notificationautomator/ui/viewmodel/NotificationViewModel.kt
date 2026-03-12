@@ -1,6 +1,9 @@
 package com.seuapp.notificationautomator.ui.viewmodel
 
+import kotlinx.coroutines.delay
+import android.util.Log
 import android.app.Application
+import android.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -17,32 +20,43 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     private val repository: NotificationRepository = NotificationRepository(application)
     private val ruleRepository: RuleRepository = RuleRepository(application)
     
-    val allNotifications: LiveData<List<Notification>> = repository.allNotifications
+    // LiveData para paginação
+    val paginatedNotifications: LiveData<List<Notification>> = repository.paginatedNotifications
     
-    private val _filteredNotifications = MutableLiveData<List<Notification>>()
-    val filteredNotifications: LiveData<List<Notification>> = _filteredNotifications
+    private val _isLoadingMore = MutableLiveData(false)
+    val isLoadingMore: LiveData<Boolean> = _isLoadingMore
     
-    private val _currentFilter = MutableLiveData<FilterType>(FilterType.ALL)
-    val currentFilter: LiveData<FilterType> = _currentFilter
+    private val _hasMore = MutableLiveData(true)
+    val hasMore: LiveData<Boolean> = _hasMore
     
-    // Contadores
+    // Filtro atual
+    private val _currentFilter = MutableLiveData(NotificationRepository.FilterType.ALL_VISIBLE)
+    val currentFilter: LiveData<NotificationRepository.FilterType> = _currentFilter
+    
+    // Contadores (agora baseados nos novos filtros)
     private val _countAll = MutableLiveData(0)
     val countAll: LiveData<Int> = _countAll
-    
-    private val _countProcessed = MutableLiveData(0)
-    val countProcessed: LiveData<Int> = _countProcessed
     
     private val _countPending = MutableLiveData(0)
     val countPending: LiveData<Int> = _countPending
     
-    private val _countReceived = MutableLiveData(0)
-    val countReceived: LiveData<Int> = _countReceived
+    private val _countAutomatic = MutableLiveData(0)
+    val countAutomatic: LiveData<Int> = _countAutomatic
+    
+    private val _countHidden = MutableLiveData(0)
+    val countHidden: LiveData<Int> = _countHidden
+    
+    private val _countWebhookSuccess = MutableLiveData(0)
+    val countWebhookSuccess: LiveData<Int> = _countWebhookSuccess
+    
+    private val _countWebhookError = MutableLiveData(0)
+    val countWebhookError: LiveData<Int> = _countWebhookError
+    
+    private val _countApproved = MutableLiveData(0)
+    val countApproved: LiveData<Int> = _countApproved
     
     private val _countRejected = MutableLiveData(0)
     val countRejected: LiveData<Int> = _countRejected
-    
-    private val _countError = MutableLiveData(0)
-    val countError: LiveData<Int> = _countError
     
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -50,92 +64,100 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
     
-    enum class FilterType {
-        ALL, PROCESSED, PENDING, RECEIVED, REJECTED, ERROR
-    }
-    
     init {
-        repository.allNotifications.observeForever { notifications ->
-            atualizarContadores(notifications)
-            aplicarFiltro(_currentFilter.value ?: FilterType.ALL, notifications)
+        // Atualizar contadores com um pequeno delay para garantir que o Repository está inicializado
+        viewModelScope.launch {
+            delay(100) // Pequeno delay para garantir que o Repository carregou
+            refreshCounters()
         }
     }
     
-    private fun atualizarContadores(notifications: List<Notification>) {
-        _countAll.value = notifications.size
-        _countProcessed.value = notifications.count { 
-            it.status == NotificationStatus.PROCESSED || 
-            it.status == NotificationStatus.APPROVED 
-        }
-        _countPending.value = notifications.count { it.status == NotificationStatus.PENDING_AUTH }
-        _countReceived.value = notifications.count { it.status == NotificationStatus.RECEIVED }
-        _countRejected.value = notifications.count { it.status == NotificationStatus.REJECTED }
-        _countError.value = notifications.count { 
-            it.status == NotificationStatus.ERROR || 
-            it.webhookStatus == WebhookStatus.FAILED 
+    private fun atualizarContadores() {
+        viewModelScope.launch {
+            try {
+                val all = repository.getVisibleCount()
+                val pending = repository.getCountByStatus(NotificationStatus.PENDING_AUTH.name)
+                val auto = repository.getCountByMultipleStatuses(
+                    listOf(NotificationStatus.AUTO_SUCCESS.name, NotificationStatus.AUTO_ERROR.name)
+                )
+                val hidden = repository.getHiddenCount()
+                val webhookSuccess = repository.getCountByWebhookStatus(WebhookStatus.SUCCESS.name)
+                val webhookError = repository.getCountByWebhookStatus(WebhookStatus.FAILED.name)
+                val approved = repository.getCountByMultipleStatuses(
+                    listOf(NotificationStatus.APPROVED_SUCCESS.name, NotificationStatus.APPROVED_ERROR.name)
+                )
+                val rejected = repository.getCountByStatus(NotificationStatus.REJECTED.name)
+                
+                Log.d("NotificationViewModel", "📊 Contadores atualizados:")
+                Log.d("NotificationViewModel", "   all=$all, pending=$pending, auto=$auto")
+                Log.d("NotificationViewModel", "   hidden=$hidden, webhookSuccess=$webhookSuccess")
+                Log.d("NotificationViewModel", "   webhookError=$webhookError, approved=$approved, rejected=$rejected")
+                
+                _countAll.postValue(all)
+                _countPending.postValue(pending)
+                _countAutomatic.postValue(auto)
+                _countHidden.postValue(hidden)
+                _countWebhookSuccess.postValue(webhookSuccess)
+                _countWebhookError.postValue(webhookError)
+                _countApproved.postValue(approved)
+                _countRejected.postValue(rejected)
+            } catch (e: Exception) {
+                Log.e("NotificationViewModel", "Erro ao atualizar contadores", e)
+            }
         }
     }
     
-    fun aplicarFiltro(filter: FilterType) {
+    fun carregarPrimeiraPagina(filter: NotificationRepository.FilterType) {
         _currentFilter.value = filter
-        allNotifications.value?.let { notifications ->
-            aplicarFiltro(filter, notifications)
-        }
+        repository.carregarPrimeiraPagina(filter)
+        // Atualizar contadores sempre que muda de filtro
+        refreshCounters() // 👈 Adicionar
     }
     
-    private fun aplicarFiltro(filter: FilterType, notifications: List<Notification>) {
-        _filteredNotifications.value = when (filter) {
-            FilterType.ALL -> notifications
-            FilterType.PROCESSED -> notifications.filter { 
-                it.status == NotificationStatus.PROCESSED || 
-                it.status == NotificationStatus.APPROVED 
-            }
-            FilterType.PENDING -> notifications.filter { it.status == NotificationStatus.PENDING_AUTH }
-            FilterType.RECEIVED -> notifications.filter { it.status == NotificationStatus.RECEIVED }
-            FilterType.REJECTED -> notifications.filter { it.status == NotificationStatus.REJECTED }
-            FilterType.ERROR -> notifications.filter { 
-                it.status == NotificationStatus.ERROR || 
-                it.webhookStatus == WebhookStatus.FAILED 
-            }
-        }
+    fun carregarProximaPagina() {
+        repository.carregarProximaPagina()
+        // Atualizar contadores também ao carregar mais
+        refreshCounters()
+    }
+    
+    fun limparNotificacoesDoFiltroAtual() {
+        repository.limparNotificacoesDoFiltroAtual()
+        refreshCounters()  // 👈 Atualizar contadores
     }
     
     fun refreshNotifications() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                repository.carregarNotificacoes()
-                _errorMessage.value = null
-            } catch (e: Exception) {
-                _errorMessage.value = "Erro ao carregar: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
+        // Recarregar a primeira página do filtro atual
+        _currentFilter.value?.let { filter ->
+            repository.carregarPrimeiraPagina(filter)
+            refreshCounters()  // 👈 Atualizar contadores
         }
     }
     
     fun approveNotification(notification: Notification) {
         viewModelScope.launch {
-            repository.updateNotificationStatus(notification.id, NotificationStatus.APPROVED)
-            repository.executarWebhookComNotificacao(notification)
+            repository.approveNotification(notification)
+            refreshCounters() // 👈 Adicionar
         }
     }
     
     fun rejectNotification(notification: Notification) {
         viewModelScope.launch {
-            repository.updateNotificationStatus(notification.id, NotificationStatus.REJECTED)
+            repository.rejectNotification(notification)
+            refreshCounters() // 👈 Adicionar
+
+        }
+    }
+    
+    fun hideSimilarNotifications(notification: Notification) {
+        viewModelScope.launch {
+            repository.hideSimilarNotifications(notification.packageName, notification.title)
+            refreshCounters()  // 👈 Atualizar contadores
         }
     }
     
     fun processNotification(notification: Notification) {
         viewModelScope.launch {
             repository.processarNotificacao(notification)
-        }
-    }
-    
-    fun ignoreNotification(notification: Notification) {
-        viewModelScope.launch {
-            repository.updateNotificationStatus(notification.id, NotificationStatus.REJECTED)
         }
     }
     
@@ -152,37 +174,62 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
             }
         }
     }
+
+    fun refreshCounters() {
+        atualizarContadores()
+    }
     
-    fun getStatusText(status: NotificationStatus): String {
-        return when (status) {
-            NotificationStatus.RECEIVED -> "Recebida"
-            NotificationStatus.PROCESSED -> "Automática"
-            NotificationStatus.PENDING_AUTH -> "A Aguardar"
-            NotificationStatus.APPROVED -> "Aprovada"
-            NotificationStatus.REJECTED -> "Rejeitada"
-            NotificationStatus.ERROR -> "Erro"
+    // ===== MÉTODOS PARA OBTER TEXTO E COR DOS STATUS =====
+    
+    fun getStatusText(status: NotificationStatus, webhookStatus: WebhookStatus?): String {
+        return when {
+            status == NotificationStatus.RECEIVED -> "Recebida"
+            status == NotificationStatus.HIDDEN -> "Ocultada"
+            status == NotificationStatus.PENDING_AUTH -> "A aguardar"
+            status == NotificationStatus.APPROVED_SUCCESS -> "Aprovada sem erros"
+            status == NotificationStatus.APPROVED_ERROR -> "Aprovada com erros"
+            status == NotificationStatus.REJECTED -> "Rejeitada"
+            status == NotificationStatus.AUTO_SUCCESS -> "Automática sem erros"
+            status == NotificationStatus.AUTO_ERROR -> "Automática com erros"
+            status == NotificationStatus.PROCESSED -> "Processada" // Legacy
+            else -> "Desconhecido"
         }
     }
     
-    fun getStatusIcon(status: NotificationStatus): String {
-        return when (status) {
-            NotificationStatus.RECEIVED -> "📥"
-            NotificationStatus.PROCESSED -> "✅"
-            NotificationStatus.PENDING_AUTH -> "⏳"
-            NotificationStatus.APPROVED -> "✓"
-            NotificationStatus.REJECTED -> "✗"
-            NotificationStatus.ERROR -> "❌"
+    fun getStatusIcon(status: NotificationStatus, webhookStatus: WebhookStatus?): String {
+        return when {
+            status == NotificationStatus.RECEIVED -> "📥"
+            status == NotificationStatus.HIDDEN -> "🙈"
+            status == NotificationStatus.PENDING_AUTH -> "⏳"
+            status == NotificationStatus.APPROVED_SUCCESS -> "✅"
+            status == NotificationStatus.APPROVED_ERROR -> "⚠️"
+            status == NotificationStatus.REJECTED -> "❌"
+            status == NotificationStatus.AUTO_SUCCESS -> "🤖"
+            status == NotificationStatus.AUTO_ERROR -> "🔥"
+            status == NotificationStatus.PROCESSED -> "⚡" // Legacy
+            else -> "❓"
         }
     }
     
+    fun mostrarNotificacoesIguais(notification: Notification) {
+        viewModelScope.launch {
+            repository.mostrarNotificacoesIguais(notification.packageName, notification.title)
+            refreshCounters()  // 👈 Atualizar contadores
+        }
+    }
+
+
     fun getStatusColor(status: NotificationStatus): Int {
         return when (status) {
-            NotificationStatus.RECEIVED -> android.graphics.Color.parseColor("#2196F3") // Azul
-            NotificationStatus.PROCESSED -> android.graphics.Color.parseColor("#4CAF50") // Verde
-            NotificationStatus.PENDING_AUTH -> android.graphics.Color.parseColor("#FF9800") // Laranja
-            NotificationStatus.APPROVED -> android.graphics.Color.parseColor("#8BC34A") // Verde claro
-            NotificationStatus.REJECTED -> android.graphics.Color.parseColor("#F44336") // Vermelho
-            NotificationStatus.ERROR -> android.graphics.Color.parseColor("#9C27B0") // Roxo
+            NotificationStatus.RECEIVED -> Color.parseColor("#2196F3") // Azul
+            NotificationStatus.HIDDEN -> Color.parseColor("#9E9E9E") // Cinza
+            NotificationStatus.PENDING_AUTH -> Color.parseColor("#FF9800") // Laranja
+            NotificationStatus.APPROVED_SUCCESS -> Color.parseColor("#4CAF50") // Verde
+            NotificationStatus.APPROVED_ERROR -> Color.parseColor("#FFC107") // Amarelo
+            NotificationStatus.REJECTED -> Color.parseColor("#F44336") // Vermelho
+            NotificationStatus.AUTO_SUCCESS -> Color.parseColor("#8BC34A") // Verde claro
+            NotificationStatus.AUTO_ERROR -> Color.parseColor("#FF5722") // Laranja escuro
+            NotificationStatus.PROCESSED -> Color.parseColor("#9C27B0") // Roxo (legacy)
         }
     }
     

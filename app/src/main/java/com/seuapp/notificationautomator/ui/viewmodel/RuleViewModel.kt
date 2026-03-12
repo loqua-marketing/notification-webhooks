@@ -1,6 +1,7 @@
 package com.seuapp.notificationautomator.ui.viewmodel
 
 import android.app.Application
+import android.util.Log  // 👈 Adicionar este import
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.seuapp.notificationautomator.data.model.ActionType
 import com.seuapp.notificationautomator.data.model.Rule
 import com.seuapp.notificationautomator.data.repository.RuleRepository
+import kotlinx.coroutines.delay  // 👈 Adicionar este import
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -94,9 +96,10 @@ class RuleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    fun saveRule(rule: Rule) {
+    fun saveRule(rule: Rule, onSuccess: ((Long) -> Unit)? = null) {
         viewModelScope.launch {
-            repository.insertRule(rule)
+            val newId = repository.insertRule(rule)
+            onSuccess?.invoke(newId)
         }
     }
     
@@ -106,9 +109,16 @@ class RuleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
+    // 👈 APENAS UMA VERSÃO desta função
     fun applyRuleToNotification(rule: Rule, notificationId: Long) {
         viewModelScope.launch {
-            repository.applyRuleToNotification(rule, notificationId)
+            try {
+                // Aguardar um pouco para garantir que a regra foi persistida
+                delay(100)
+                repository.applyRuleToNotification(rule, notificationId)
+            } catch (e: Exception) {
+                Log.e("RuleViewModel", "Erro ao aplicar regra", e)
+            }
         }
     }
     

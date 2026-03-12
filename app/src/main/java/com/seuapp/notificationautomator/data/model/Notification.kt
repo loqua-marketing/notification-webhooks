@@ -20,16 +20,20 @@ data class Notification(
     val webhookError: String? = null,
     // 🆕 NOVO CAMPO (nullable para compatibilidade)
     val category: String? = null,  // "urgent", "transaction", etc.
-    val categoryConfidence: Float? = null  // 0.0 a 1.0
+    val categoryConfidence: Float? = null,  // 0.0 a 1.0
+    val isHidden: Boolean = false  // NOVO campo
 )
 
 enum class NotificationStatus {
-    RECEIVED,      // Sem regra, aguarda ação
-    PROCESSED,     // Processada automaticamente por regra
-    PENDING_AUTH,  // Aguarda autorização
-    APPROVED,      // Aprovada manualmente
-    REJECTED,      // Rejeitada manualmente
-    ERROR          // Erro no webhook
+    RECEIVED,           // Recebida sem regras
+    HIDDEN,             // Ocultada pelo utilizador
+    PENDING_AUTH,       // A aguardar aprovação
+    APPROVED_SUCCESS,    // Aprovada e webhook OK
+    APPROVED_ERROR,      // Aprovada mas webhook falhou
+    REJECTED,           // Rejeitada
+    AUTO_SUCCESS,       // Automática e webhook OK
+    AUTO_ERROR,         // Automática mas webhook falhou
+    PROCESSED           // Legacy - manter para compatibilidade
 }
 
 enum class WebhookStatus {

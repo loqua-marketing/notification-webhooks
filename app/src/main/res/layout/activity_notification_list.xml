@@ -1,191 +1,206 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:background="@android:color/white">
 
-    <!-- Botões superiores -->
+    <!-- Filtros Linha 1 -->
     <LinearLayout
+        android:id="@+id/filterRow1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
-
-        <Button
-            android:id="@+id/btnRefresh"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Atualizar"
-            android:layout_marginEnd="4dp"/>
-
-        <Button
-            android:id="@+id/btnClear"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Limpar"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"/>
-
-        <Button
-            android:id="@+id/btnSettings"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Permissão"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
-
-    <!-- FILTROS -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Filtrar por:"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="16dp"
-        android:weightSum="5">
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
 
         <Button
             android:id="@+id/btnFilterAll"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="📋"
-            android:textSize="20sp"
-            android:backgroundTint="#FF9800"
-            android:layout_marginEnd="2dp"/>
-
-        <Button
-            android:id="@+id/btnFilterProcessed"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="✅"
-            android:textSize="24sp"
-            android:backgroundTint="#4CAF50"
-            android:layout_marginEnd="2dp"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="📥"
+            android:textSize="14sp"
+            android:alpha="1.0"
+            android:tag="all"/>
 
         <Button
             android:id="@+id/btnFilterPending"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
             android:text="⏳"
-            android:textSize="24sp"
-            android:backgroundTint="#FF9800"
-            android:layout_marginEnd="2dp"/>
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="pending"/>
 
         <Button
-            android:id="@+id/btnFilterReceived"
+            android:id="@+id/btnFilterAutomatic"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="📥"
-            android:textSize="24sp"
-            android:backgroundTint="#2196F3"
-            android:layout_marginEnd="2dp"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🤖"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="auto"/>
 
         <Button
-            android:id="@+id/btnFilterRejected"
+            android:id="@+id/btnFilterHidden"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="✗"
-            android:textSize="24sp"
-            android:backgroundTint="#F44336"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🙈"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="hidden"/>
     </LinearLayout>
 
-    <!-- Contadores -->
+    <!-- Filtros Linha 2 -->
     <LinearLayout
+        android:id="@+id/filterRow2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_marginBottom="8dp"
-        android:weightSum="5">
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
 
-        <TextView
-            android:id="@+id/tvCount"
+        <Button
+            android:id="@+id/btnFilterWebhookSuccess"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="Total: 0"
-            android:textSize="12sp"
-            android:textStyle="bold"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🌐"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="webhook_success"/>
 
-        <TextView
-            android:id="@+id/tvCountProcessed"
+        <Button
+            android:id="@+id/btnFilterWebhookError"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="✅ 0"
-            android:textSize="12sp"
-            android:textColor="#4CAF50"
-            android:gravity="center"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="⚠️"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="webhook_error"/>
 
-        <TextView
-            android:id="@+id/tvCountPending"
+        <Button
+            android:id="@+id/btnFilterApproved"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="⏳ 0"
-            android:textSize="12sp"
-            android:textColor="#FF9800"
-            android:gravity="center"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="✅"
+            android:textSize="28sp"
+            android:alpha="0.5"
+            android:tag="approved"/>
 
-        <TextView
-            android:id="@+id/tvCountReceived"
+        <Button
+            android:id="@+id/btnFilterRejected"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="📥 0"
-            android:textSize="12sp"
-            android:textColor="#2196F3"
-            android:gravity="center"/>
-
-        <TextView
-            android:id="@+id/tvCountRejected"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="✗ 0"
-            android:textSize="12sp"
-            android:textColor="#F44336"
-            android:gravity="center"/>
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="❌"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="rejected"/>
     </LinearLayout>
 
-    <!-- Lista vazia -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Nenhuma notificação guardada"
-        android:textSize="16sp"
-        android:gravity="center"
-        android:layout_marginTop="32dp"
-        android:visibility="gone"/>
-
-    <!-- Container da lista -->
+    <!-- Container para as notificações (ScrollView) -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <LinearLayout
             android:id="@+id/container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"/>
+            android:orientation="vertical"
+            android:padding="8dp"/>
     </ScrollView>
 
+    <!-- Barra inferior com ações (ordem: +25, 🔄, 🗑️) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="4dp">
+
+        <Button
+            android:id="@+id/btnLoadMore"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="➕25"
+            android:textSize="20sp"
+            android:visibility="gone"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnRefresh"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🔄"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🗑️"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:visibility="gone"/>
+    </LinearLayout>
+
+    <!-- TextView para lista vazia -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Nenhuma notificação encontrada"
+        android:textSize="16sp"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="gone"/>
 </LinearLayout>
