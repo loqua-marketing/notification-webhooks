@@ -220,38 +220,38 @@ class RuleCreateActivity : AppCompatActivity() {
             Log.d(TAG, "   $index: $name - $pkg")
         }
         
-        // Se veio de uma notificação, pré-selecionar a app
+        // PRÉ-SELECIONAR A APP DA NOTIFICAÇÃO (se existir)
+        var initialSelection = 0
         if (notificationPackage != null) {
             val pkg = notificationPackage!!
-            Log.d(TAG, "Procurando package da notificação: $pkg")
+            Log.d(TAG, "🔍 Procurando package da notificação: $pkg")
             val index = appPackages.indexOfFirst { it == pkg }
             if (index >= 0) {
-                spinnerApps.setSelection(index)
+                initialSelection = index
                 selectedAppPackage = pkg
                 selectedAppName = appNames[index]
-                tvSelectedApp.text = "App selecionada: ${appNames[index]}"
-                tvPackageHint.text = "Package: $pkg"
-                rgAppChoice.check(R.id.rbSpecificApp)
-                Log.d(TAG, "✅ App encontrada: ${appNames[index]}")
+                Log.d(TAG, "✅ App encontrada: ${appNames[index]} no índice $index")
             } else {
                 Log.d(TAG, "❌ Package não encontrado na lista")
-                if (appNames.isNotEmpty()) {
-                    spinnerApps.setSelection(0)
-                    selectedAppPackage = appPackages[0]
-                    selectedAppName = appNames[0]
-                    tvSelectedApp.text = "App selecionada: ${appNames[0]}"
-                    tvPackageHint.text = "Package: ${appPackages[0]}"
-                }
             }
-        } else {
-            if (appNames.isNotEmpty()) {
-                spinnerApps.setSelection(0)
-                selectedAppPackage = appPackages[0]
-                selectedAppName = appNames[0]
-                tvSelectedApp.text = "App selecionada: ${appNames[0]}"
-                tvPackageHint.text = "Package: ${appPackages[0]}"
+        } else if (selectedAppPackage != null) {
+            // Se já temos uma app selecionada (modo edição), encontrar o índice
+            val index = appPackages.indexOfFirst { it == selectedAppPackage }
+            if (index >= 0) {
+                initialSelection = index
+                Log.d(TAG, "📝 Modo edição: app selecionada ${appNames[index]}")
             }
         }
+        
+        // Garantir que o spinner está a usar o índice correto
+        spinnerApps.setSelection(initialSelection)
+        
+        // Atualizar os textos com a app selecionada
+        val selectedIndex = spinnerApps.selectedItemPosition
+        selectedAppPackage = appPackages[selectedIndex]
+        selectedAppName = appNames[selectedIndex]
+        tvSelectedApp.text = "App selecionada: ${appNames[selectedIndex]}"
+        tvPackageHint.text = "Package: ${appPackages[selectedIndex]}"
         
         spinnerApps.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -291,26 +291,35 @@ class RuleCreateActivity : AppCompatActivity() {
         btnNext.setOnClickListener {
             setupStep(2)
         }
-    }    
+    }
+
     private fun getInstalledApps(): List<Pair<String, String>> {
         return try {
             val pm = packageManager
-            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            // NÃO filtrar - obter TODAS as apps instaladas (incluindo sistema)
+            val apps = pm.getInstalledApplications(0)
             
-            // Filtrar apenas apps de usuário e algumas conhecidas
-            val filteredApps = apps.filter { app ->
-                (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
-                app.packageName == "com.google.android.gm" ||
-                app.packageName == "com.whatsapp" ||
-                app.packageName == "com.facebook.katana" ||
-                app.packageName == "com.linkedin.android" ||
-                app.packageName == "com.google.android.apps.maps"
-            }.map { app ->
-                val name = pm.getApplicationLabel(app).toString()
+            // Mapear para (nome, package)
+            val mappedApps = apps.map { app ->
+                val name = try {
+                    pm.getApplicationLabel(app).toString()
+                } catch (e: Exception) {
+                    // Se não conseguir obter o nome, usar o package name
+                    app.packageName.substringAfterLast(".").replaceFirstChar { it.uppercase() }
+                }
                 name to app.packageName
             }.sortedBy { it.first } // Ordenar por nome
             
-            filteredApps
+            Log.d(TAG, "📱 Total de apps encontradas (incluindo sistema): ${mappedApps.size}")
+            
+            // Debug: mostrar algumas apps de sistema
+            val systemApps = mappedApps.filter { it.second.startsWith("android.") || it.second.startsWith("com.android.") }
+            Log.d(TAG, "⚙️ Apps de sistema encontradas: ${systemApps.size}")
+            systemApps.take(5).forEach { (name, pkg) ->
+                Log.d(TAG, "   📌 $name - $pkg")
+            }
+            
+            mappedApps
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao listar apps", e)
             emptyList()
@@ -328,6 +337,10 @@ class RuleCreateActivity : AppCompatActivity() {
         val etHourFrom = view.findViewById<EditText>(R.id.etHourFrom)
         val etHourTo = view.findViewById<EditText>(R.id.etHourTo)
         
+        // NOVOS: Checkbox para ativar dias específicos e layout dos dias
+        val cbEnableSpecificDays = view.findViewById<CheckBox>(R.id.cbEnableSpecificDays)
+        val layoutDays = view.findViewById<LinearLayout>(R.id.layoutDays)
+        
         val cbMonday = view.findViewById<CheckBox>(R.id.cbMonday)
         val cbTuesday = view.findViewById<CheckBox>(R.id.cbTuesday)
         val cbWednesday = view.findViewById<CheckBox>(R.id.cbWednesday)
@@ -340,27 +353,63 @@ class RuleCreateActivity : AppCompatActivity() {
         val rgNotificationType = view.findViewById<RadioGroup>(R.id.rgNotificationType)
         val cbHasImage = view.findViewById<CheckBox>(R.id.cbHasImage)
         
-        // Pré-preenchimento com dados existentes
+        // ===== 1. CARREGAR DADOS EXISTENTES DA REGRA (se houver) =====
         titleContains?.let { etTitleContains.setText(it) }
         textContains?.let { etTextContains.setText(it) }
+        
+        // HORÁRIO - INICIAR DESMARCADO
+        cbEnableTime.isChecked = false
+        layoutTime.visibility = View.GONE
+        etHourFrom.hint = "09:00"  // Placeholder
+        etHourTo.hint = "18:00"     // Placeholder
+        etHourFrom.setText("09:00")  // 👈 NOVO: Pré-preenchido
+        etHourTo.setText("18:00")    // 👈 NOVO: Pré-preenchido
         
         if (hourFrom != null && hourTo != null) {
             cbEnableTime.isChecked = true
             layoutTime.visibility = View.VISIBLE
             etHourFrom.setText(hourFrom)
             etHourTo.setText(hourTo)
+            etHourFrom.hint = ""  // Limpar placeholder quando tem valor
+            etHourTo.hint = ""
         }
         
-        selectedDays.forEach { day ->
-            when (day) {
-                "MONDAY" -> cbMonday.isChecked = true
-                "TUESDAY" -> cbTuesday.isChecked = true
-                "WEDNESDAY" -> cbWednesday.isChecked = true
-                "THURSDAY" -> cbThursday.isChecked = true
-                "FRIDAY" -> cbFriday.isChecked = true
-                "SATURDAY" -> cbSaturday.isChecked = true
-                "SUNDAY" -> cbSunday.isChecked = true
+        // ===== DIAS DA SEMANA =====
+        // Por defeito: "Ativar dias específicos" DESATIVADO
+        cbEnableSpecificDays.isChecked = false
+        layoutDays.visibility = View.GONE
+        
+        // Se há dados existentes na regra, carregá-los
+        if (selectedDays.isNotEmpty()) {
+            cbEnableSpecificDays.isChecked = true
+            layoutDays.visibility = View.VISIBLE
+            
+            // Desmarcar todos primeiro
+            cbMonday.isChecked = false
+            cbTuesday.isChecked = false
+            cbWednesday.isChecked = false
+            cbThursday.isChecked = false
+            cbFriday.isChecked = false
+            cbSaturday.isChecked = false
+            cbSunday.isChecked = false
+            
+            // Marcar os dias selecionados
+            selectedDays.forEach { day ->
+                when (day) {
+                    "MONDAY" -> cbMonday.isChecked = true
+                    "TUESDAY" -> cbTuesday.isChecked = true
+                    "WEDNESDAY" -> cbWednesday.isChecked = true
+                    "THURSDAY" -> cbThursday.isChecked = true
+                    "FRIDAY" -> cbFriday.isChecked = true
+                    "SATURDAY" -> cbSaturday.isChecked = true
+                    "SUNDAY" -> cbSunday.isChecked = true
+                }
             }
+            
+            // Verificar se todos estão marcados para atualizar cbAllDays
+            cbAllDays.isChecked = cbMonday.isChecked && cbTuesday.isChecked && 
+                                  cbWednesday.isChecked && cbThursday.isChecked && 
+                                  cbFriday.isChecked && cbSaturday.isChecked && cbSunday.isChecked
         }
         
         when (isSilent) {
@@ -371,20 +420,48 @@ class RuleCreateActivity : AppCompatActivity() {
         
         cbHasImage.isChecked = hasImage
         
-        cbEnableTime.setOnCheckedChangeListener { _, isChecked ->
-            layoutTime.visibility = if (isChecked) View.VISIBLE else View.GONE
+        // ===== 2. PRÉ-PREENCHER COM DADOS DA NOTIFICAÇÃO (se for criação nova) =====
+        if (!isEditMode && !isDuplicateMode && notificationTimestamp > 0) {
+            
+            // Pré-preencher título (se ainda não foi preenchido)
+            if (etTitleContains.text.isNullOrBlank() && !notificationTitle.isNullOrBlank()) {
+                etTitleContains.setText(notificationTitle)
+                Log.d(TAG, "📝 Título pré-preenchido: $notificationTitle")
+            }
+            
+            // Pré-preencher texto (se ainda não foi preenchido)
+            if (etTextContains.text.isNullOrBlank() && !notificationText.isNullOrBlank()) {
+                etTextContains.setText(notificationText)
+                Log.d(TAG, "💬 Texto pré-preenchido: $notificationText")
+            }
+            
+            // NÃO pré-preencher horário - manter desmarcado com placeholders
+            // NÃO pré-preencher dias - manter "Ativar dias específicos" desativado
         }
         
-        if (notificationTimestamp > 0 && !isEditMode && !isDuplicateMode) {
-            try {
+        // ===== 3. LISTENERS =====
+        cbEnableTime.setOnCheckedChangeListener { _, isChecked ->
+            layoutTime.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (!isChecked) {
+                etHourFrom.text?.clear()
+                etHourTo.text?.clear()
+            }
+        }
+        
+        // Listener para "Ativar dias específicos"
+        cbEnableSpecificDays.setOnCheckedChangeListener { _, isChecked ->
+            layoutDays.visibility = if (isChecked) View.VISIBLE else View.GONE
+            
+            if (isChecked) {
+                // Quando ativar, selecionar o dia atual por defeito
                 val calendar = Calendar.getInstance()
-                calendar.timeInMillis = notificationTimestamp
-                val hour = calendar.get(Calendar.HOUR_OF_DAY)
-                val minute = calendar.get(Calendar.MINUTE)
-                
-                cbEnableTime.isChecked = true
-                etHourFrom.setText(String.format("%02d:%02d", (hour - 1).coerceIn(0, 23), minute))
-                etHourTo.setText(String.format("%02d:%02d", (hour + 1).coerceIn(0, 23), minute))
+                cbMonday.isChecked = false
+                cbTuesday.isChecked = false
+                cbWednesday.isChecked = false
+                cbThursday.isChecked = false
+                cbFriday.isChecked = false
+                cbSaturday.isChecked = false
+                cbSunday.isChecked = false
                 
                 when (calendar.get(Calendar.DAY_OF_WEEK)) {
                     Calendar.MONDAY -> cbMonday.isChecked = true
@@ -395,11 +472,13 @@ class RuleCreateActivity : AppCompatActivity() {
                     Calendar.SATURDAY -> cbSaturday.isChecked = true
                     Calendar.SUNDAY -> cbSunday.isChecked = true
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro ao processar timestamp", e)
+                
+                // Atualizar estado do "Todos"
+                cbAllDays.isChecked = false
             }
         }
         
+        // Listener para "Todos"
         cbAllDays.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 cbMonday.isChecked = true
@@ -411,6 +490,34 @@ class RuleCreateActivity : AppCompatActivity() {
                 cbSunday.isChecked = true
             }
         }
+        
+        // Quando qualquer dia individual é (des)marcado, atualizar o estado de "Todos"
+        val dayCheckListener = CompoundButton.OnCheckedChangeListener { _, _ ->
+            val allChecked = cbMonday.isChecked && cbTuesday.isChecked && 
+                             cbWednesday.isChecked && cbThursday.isChecked && 
+                             cbFriday.isChecked && cbSaturday.isChecked && cbSunday.isChecked
+            cbAllDays.setOnCheckedChangeListener(null) // Remover listener temporariamente
+            cbAllDays.isChecked = allChecked
+            cbAllDays.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    cbMonday.isChecked = true
+                    cbTuesday.isChecked = true
+                    cbWednesday.isChecked = true
+                    cbThursday.isChecked = true
+                    cbFriday.isChecked = true
+                    cbSaturday.isChecked = true
+                    cbSunday.isChecked = true
+                }
+            }
+        }
+        
+        cbMonday.setOnCheckedChangeListener(dayCheckListener)
+        cbTuesday.setOnCheckedChangeListener(dayCheckListener)
+        cbWednesday.setOnCheckedChangeListener(dayCheckListener)
+        cbThursday.setOnCheckedChangeListener(dayCheckListener)
+        cbFriday.setOnCheckedChangeListener(dayCheckListener)
+        cbSaturday.setOnCheckedChangeListener(dayCheckListener)
+        cbSunday.setOnCheckedChangeListener(dayCheckListener)
         
         btnPrevious.setOnClickListener { setupStep(1) }
         btnNext.setOnClickListener {
@@ -425,14 +532,21 @@ class RuleCreateActivity : AppCompatActivity() {
                 hourTo = null
             }
             
+            // Processar dias da semana
             selectedDays.clear()
-            if (cbMonday.isChecked) selectedDays.add("MONDAY")
-            if (cbTuesday.isChecked) selectedDays.add("TUESDAY")
-            if (cbWednesday.isChecked) selectedDays.add("WEDNESDAY")
-            if (cbThursday.isChecked) selectedDays.add("THURSDAY")
-            if (cbFriday.isChecked) selectedDays.add("FRIDAY")
-            if (cbSaturday.isChecked) selectedDays.add("SATURDAY")
-            if (cbSunday.isChecked) selectedDays.add("SUNDAY")
+            if (cbEnableSpecificDays.isChecked) {
+                // Se "Ativar dias específicos" está marcado, usar os dias selecionados
+                if (cbMonday.isChecked) selectedDays.add("MONDAY")
+                if (cbTuesday.isChecked) selectedDays.add("TUESDAY")
+                if (cbWednesday.isChecked) selectedDays.add("WEDNESDAY")
+                if (cbThursday.isChecked) selectedDays.add("THURSDAY")
+                if (cbFriday.isChecked) selectedDays.add("FRIDAY")
+                if (cbSaturday.isChecked) selectedDays.add("SATURDAY")
+                if (cbSunday.isChecked) selectedDays.add("SUNDAY")
+            } else {
+                // Se NÃO está marcado, considerar TODOS os dias
+                selectedDays.addAll(listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"))
+            }
             
             isSilent = when (rgNotificationType.checkedRadioButtonId) {
                 R.id.rbSilent -> true
@@ -602,16 +716,28 @@ class RuleCreateActivity : AppCompatActivity() {
             )
             
             if (isEditMode) {
+                // Em modo de edição, a regra já existe
                 viewModel.updateRule(rule)
                 Toast.makeText(this@RuleCreateActivity, "Regra atualizada com sucesso!", Toast.LENGTH_SHORT).show()
+                
+                if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
+                    Log.d(TAG, "A aplicar regra à notificação $notificationId (edição)")
+                    viewModel.applyRuleToNotification(rule, notificationId)
+                }
             } else {
-                viewModel.saveRule(rule)
-                Toast.makeText(this@RuleCreateActivity, "Regra criada com sucesso!", Toast.LENGTH_SHORT).show()
-            }
-            
-            if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
-                Log.d(TAG, "A aplicar regra à notificação $notificationId")
-                viewModel.applyRuleToNotification(rule, notificationId)
+                // Em modo de criação, precisamos do ID da nova regra
+                viewModel.saveRule(rule) { newRuleId ->
+                    Log.d(TAG, "Regra criada com ID: $newRuleId")
+                    
+                    if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
+                        Log.d(TAG, "A aplicar regra à notificação $notificationId com ID $newRuleId")
+                        // Criar uma cópia da regra com o ID correto
+                        val ruleWithId = rule.copy(id = newRuleId)
+                        viewModel.applyRuleToNotification(ruleWithId, notificationId)
+                    }
+                    
+                    Toast.makeText(this@RuleCreateActivity, "Regra criada com sucesso!", Toast.LENGTH_SHORT).show()
+                }
             }
             
             finish()

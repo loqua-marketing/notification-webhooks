@@ -94,7 +94,7 @@
             android:id="@+id/cbApplyToCurrent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="✅ Aplicar esta regra à notificação atual"
+            android:text="Aplicar esta regra à notificação atual"
             android:checked="true"
             android:visibility="gone"/>
 
