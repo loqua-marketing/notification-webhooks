@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -14,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.seuapp.notificationautomator.data.model.Notification
 import com.seuapp.notificationautomator.data.model.NotificationStatus
+import com.seuapp.notificationautomator.data.model.WebhookStatus
 import com.seuapp.notificationautomator.ui.viewmodel.NotificationViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -30,11 +32,15 @@ class NotificationListActivity : AppCompatActivity() {
     private lateinit var btnSettings: Button
     private lateinit var pm: PackageManager
     
-    // Botões de filtro
+    // Botões de filtro (8 botões)
     private lateinit var btnFilterAll: Button
-    private lateinit var btnFilterProcessed: Button
     private lateinit var btnFilterPending: Button
-    private lateinit var btnFilterIgnored: Button
+    private lateinit var btnFilterAutomatic: Button
+    private lateinit var btnFilterHidden: Button
+    private lateinit var btnFilterWebhookSuccess: Button
+    private lateinit var btnFilterWebhookError: Button
+    private lateinit var btnFilterApproved: Button
+    private lateinit var btnFilterRejected: Button
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,10 +66,15 @@ class NotificationListActivity : AppCompatActivity() {
         btnClear = findViewById(R.id.btnClear)
         btnSettings = findViewById(R.id.btnSettings)
         
+        // Inicializar todos os botões de filtro
         btnFilterAll = findViewById(R.id.btnFilterAll)
-        btnFilterProcessed = findViewById(R.id.btnFilterProcessed)
         btnFilterPending = findViewById(R.id.btnFilterPending)
-        btnFilterIgnored = findViewById(R.id.btnFilterIgnored)
+        btnFilterAutomatic = findViewById(R.id.btnFilterAutomatic)
+        btnFilterHidden = findViewById(R.id.btnFilterHidden)
+        btnFilterWebhookSuccess = findViewById(R.id.btnFilterWebhookSuccess)
+        btnFilterWebhookError = findViewById(R.id.btnFilterWebhookError)
+        btnFilterApproved = findViewById(R.id.btnFilterApproved)
+        btnFilterRejected = findViewById(R.id.btnFilterRejected)
     }
     
     private fun setupViewModel() {
@@ -92,38 +103,37 @@ class NotificationListActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
         
+        // Listeners dos filtros
         btnFilterAll.setOnClickListener {
-            viewModel.aplicarFiltro(NotificationViewModel.FilterType.ALL)
-            atualizarCoresBotoes(NotificationViewModel.FilterType.ALL)
-        }
-        
-        btnFilterProcessed.setOnClickListener {
-            viewModel.aplicarFiltro(NotificationViewModel.FilterType.PROCESSED)
-            atualizarCoresBotoes(NotificationViewModel.FilterType.PROCESSED)
+            viewModel.setFilter(NotificationViewModel.FilterType.ALL_VISIBLE)
         }
         
         btnFilterPending.setOnClickListener {
-            viewModel.aplicarFiltro(NotificationViewModel.FilterType.PENDING)
-            atualizarCoresBotoes(NotificationViewModel.FilterType.PENDING)
+            viewModel.setFilter(NotificationViewModel.FilterType.PENDING)
         }
         
-        btnFilterIgnored.setOnClickListener {
-            viewModel.aplicarFiltro(NotificationViewModel.FilterType.IGNORED)
-            atualizarCoresBotoes(NotificationViewModel.FilterType.IGNORED)
+        btnFilterAutomatic.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.AUTOMATIC)
         }
-    }
-    
-    private fun atualizarCoresBotoes(filtroAtivo: NotificationViewModel.FilterType) {
-        btnFilterAll.alpha = 0.5f
-        btnFilterProcessed.alpha = 0.5f
-        btnFilterPending.alpha = 0.5f
-        btnFilterIgnored.alpha = 0.5f
         
-        when (filtroAtivo) {
-            NotificationViewModel.FilterType.ALL -> btnFilterAll.alpha = 1.0f
-            NotificationViewModel.FilterType.PROCESSED -> btnFilterProcessed.alpha = 1.0f
-            NotificationViewModel.FilterType.PENDING -> btnFilterPending.alpha = 1.0f
-            NotificationViewModel.FilterType.IGNORED -> btnFilterIgnored.alpha = 1.0f
+        btnFilterHidden.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.HIDDEN)
+        }
+        
+        btnFilterWebhookSuccess.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.WEBHOOK_SUCCESS)
+        }
+        
+        btnFilterWebhookError.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.WEBHOOK_ERROR)
+        }
+        
+        btnFilterApproved.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.APPROVED)
+        }
+        
+        btnFilterRejected.setOnClickListener {
+            viewModel.setFilter(NotificationViewModel.FilterType.REJECTED)
         }
     }
     
@@ -134,18 +144,35 @@ class NotificationListActivity : AppCompatActivity() {
         
         viewModel.countAll.observe(this) { count ->
             tvCount.text = "Total: $count"
-        }
-        
-        viewModel.countProcessed.observe(this) { count ->
-            btnFilterProcessed.text = "✅ Processadas ($count)"
+            btnFilterAll.text = if (count > 0) "📥 $count" else "📥"
         }
         
         viewModel.countPending.observe(this) { count ->
-            btnFilterPending.text = "⏳ Aguardam ($count)"
+            btnFilterPending.text = if (count > 0) "⏳ $count" else "⏳"
         }
         
-        viewModel.countIgnored.observe(this) { count ->
-            btnFilterIgnored.text = "⭕ Ignoradas ($count)"
+        viewModel.countAutomatic.observe(this) { count ->
+            btnFilterAutomatic.text = if (count > 0) "🤖 $count" else "🤖"
+        }
+        
+        viewModel.countHidden.observe(this) { count ->
+            btnFilterHidden.text = if (count > 0) "🙈 $count" else "🙈"
+        }
+        
+        viewModel.countWebhookSuccess.observe(this) { count ->
+            btnFilterWebhookSuccess.text = if (count > 0) "🌐 $count" else "🌐"
+        }
+        
+        viewModel.countWebhookError.observe(this) { count ->
+            btnFilterWebhookError.text = if (count > 0) "⚠️ $count" else "⚠️"
+        }
+        
+        viewModel.countApproved.observe(this) { count ->
+            btnFilterApproved.text = if (count > 0) "✅ $count" else "✅"
+        }
+        
+        viewModel.countRejected.observe(this) { count ->
+            btnFilterRejected.text = if (count > 0) "❌ $count" else "❌"
         }
         
         viewModel.currentFilter.observe(this) { filter ->
@@ -157,6 +184,35 @@ class NotificationListActivity : AppCompatActivity() {
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+    
+    private fun atualizarCoresBotoes(filtroAtivo: NotificationViewModel.FilterType) {
+        // Lista de todos os botões
+        val todosBotoes = listOf(
+            btnFilterAll, btnFilterPending, btnFilterAutomatic, btnFilterHidden,
+            btnFilterWebhookSuccess, btnFilterWebhookError, btnFilterApproved, btnFilterRejected
+        )
+        
+        // Resetar todos para inativo
+        todosBotoes.forEach { button ->
+            button.isSelected = false
+            button.alpha = 0.6f
+        }
+        
+        // Ativar o botão correspondente
+        val botaoAtivo = when (filtroAtivo) {
+            NotificationViewModel.FilterType.ALL_VISIBLE -> btnFilterAll
+            NotificationViewModel.FilterType.PENDING -> btnFilterPending
+            NotificationViewModel.FilterType.AUTOMATIC -> btnFilterAutomatic
+            NotificationViewModel.FilterType.HIDDEN -> btnFilterHidden
+            NotificationViewModel.FilterType.WEBHOOK_SUCCESS -> btnFilterWebhookSuccess
+            NotificationViewModel.FilterType.WEBHOOK_ERROR -> btnFilterWebhookError
+            NotificationViewModel.FilterType.APPROVED -> btnFilterApproved
+            NotificationViewModel.FilterType.REJECTED -> btnFilterRejected
+        }
+        
+        botaoAtivo.isSelected = true
+        botaoAtivo.alpha = 1.0f
     }
     
     private fun getAppName(packageName: String): String {
@@ -201,7 +257,10 @@ class NotificationListActivity : AppCompatActivity() {
             val tvText = itemView.findViewById<TextView>(R.id.tvText)
             val tvTime = itemView.findViewById<TextView>(R.id.tvTime)
             val tvStatus = itemView.findViewById<TextView>(R.id.tvStatus)
+            val tvError = itemView.findViewById<TextView>(R.id.tvError)
+            val layoutActions = itemView.findViewById<LinearLayout>(R.id.layoutActions)
             val btnApprove = itemView.findViewById<Button>(R.id.btnApprove)
+            val btnReject = itemView.findViewById<Button>(R.id.btnReject)
             
             val appName = getAppName(notification.packageName)
             tvPackage.text = appName
@@ -209,23 +268,41 @@ class NotificationListActivity : AppCompatActivity() {
             tvText.text = notification.text ?: "(sem texto)"
             tvTime.text = dateFormat.format(Date(notification.timestamp))
             
+            // Status e cor
             val (statusText, statusColor) = when (notification.status) {
                 NotificationStatus.RECEIVED -> Pair("📥 Recebida", Color.parseColor("#2196F3"))
                 NotificationStatus.PROCESSED -> Pair("✅ Processada", Color.parseColor("#4CAF50"))
                 NotificationStatus.PENDING_AUTH -> Pair("⏳ Aguarda", Color.parseColor("#FF9800"))
-                NotificationStatus.IGNORED -> Pair("⭕ Ignorada", Color.parseColor("#9E9E9E"))
+                NotificationStatus.APPROVED_SUCCESS -> Pair("✅ Aprovada", Color.parseColor("#4CAF50"))
+                NotificationStatus.APPROVED_ERROR -> Pair("⚠️ Aprovada (erro)", Color.parseColor("#FF9800"))
+                NotificationStatus.REJECTED -> Pair("❌ Rejeitada", Color.parseColor("#F44336"))
+                NotificationStatus.AUTO_SUCCESS -> Pair("🤖 Automática", Color.parseColor("#2196F3"))
+                NotificationStatus.AUTO_ERROR -> Pair("🔥 Automática (erro)", Color.parseColor("#F44336"))
+                NotificationStatus.HIDDEN -> Pair("🙈 Ocultada", Color.parseColor("#9E9E9E"))
+                else -> Pair("📥 Recebida", Color.parseColor("#2196F3"))
             }
             tvStatus.text = statusText
             tvStatus.setTextColor(statusColor)
             
-            // Botão de aprovar (só aparece para pendentes)
+            // Mostrar mensagem de erro se houver
+            if (!notification.webhookError.isNullOrBlank()) {
+                tvError.text = "❌ Erro: ${notification.webhookError}"
+                tvError.visibility = TextView.VISIBLE
+            } else {
+                tvError.visibility = TextView.GONE
+            }
+            
+            // Botões de ação (só aparece para pendentes)
             if (notification.status == NotificationStatus.PENDING_AUTH) {
-                btnApprove.visibility = Button.VISIBLE
+                layoutActions.visibility = LinearLayout.VISIBLE
                 btnApprove.setOnClickListener {
                     viewModel.approveNotification(notification)
                 }
+                btnReject.setOnClickListener {
+                    viewModel.rejectNotification(notification)
+                }
             } else {
-                btnApprove.visibility = Button.GONE
+                layoutActions.visibility = LinearLayout.GONE
             }
             
             itemView.setOnClickListener {
@@ -243,6 +320,13 @@ class NotificationListActivity : AppCompatActivity() {
             "📋 Ver Detalhes"
         )
         
+        // Opção para ocultar/mostrar
+        if (notification.isHidden) {
+            opcoes.add(0, "👁️ Mostrar novamente")
+        } else {
+            opcoes.add(0, "🙈 Ocultar notificações iguais")
+        }
+        
         // Adicionar opção de executar regra se já existir
         if (notification.ruleId != null) {
             opcoes.add(1, "▶️ Executar Regra Agora")
@@ -254,11 +338,37 @@ class NotificationListActivity : AppCompatActivity() {
             .setTitle("$appName")
             .setItems(opcoes.toTypedArray()) { _, which ->
                 when (opcoes[which]) {
+                    "🙈 Ocultar notificações iguais" -> ocultarNotificacoes(notification)
+                    "👁️ Mostrar novamente" -> mostrarNotificacoes(notification)
                     "⚡ Criar Regra" -> criarRegra(notification)
                     "▶️ Executar Regra Agora" -> executarRegraAgora(notification)
                     "📋 Ver Detalhes" -> mostrarDetalhes(notification)
                 }
             }
+            .show()
+    }
+    
+    private fun ocultarNotificacoes(notification: Notification) {
+        AlertDialog.Builder(this)
+            .setTitle("Ocultar notificações")
+            .setMessage("Deseja ocultar todas as notificações iguais a esta?")
+            .setPositiveButton("Sim") { _, _ ->
+                viewModel.hideSimilarNotifications(notification)
+                Toast.makeText(this, "Notificações ocultadas", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Não", null)
+            .show()
+    }
+    
+    private fun mostrarNotificacoes(notification: Notification) {
+        AlertDialog.Builder(this)
+            .setTitle("Mostrar notificações")
+            .setMessage("Deseja mostrar novamente as notificações ocultas?")
+            .setPositiveButton("Sim") { _, _ ->
+                viewModel.mostrarNotificacoesIguais(notification)
+                Toast.makeText(this, "Notificações visíveis", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Não", null)
             .show()
     }
     
@@ -281,7 +391,7 @@ class NotificationListActivity : AppCompatActivity() {
             putExtra("notification_text", notification.text)
             putExtra("notification_timestamp", notification.timestamp)
             putExtra("notification_id", notification.id)
-            putExtra("apply_rule_now", true)  // Nova flag para aplicar regra agora
+            putExtra("apply_rule_now", true)
         }
         startActivity(intent)
     }
@@ -294,10 +404,16 @@ class NotificationListActivity : AppCompatActivity() {
             NotificationStatus.RECEIVED -> "Recebida"
             NotificationStatus.PROCESSED -> "Processada"
             NotificationStatus.PENDING_AUTH -> "A aguardar autorização"
-            NotificationStatus.IGNORED -> "Ignorada"
+            NotificationStatus.APPROVED_SUCCESS -> "Aprovada (webhook OK)"
+            NotificationStatus.APPROVED_ERROR -> "Aprovada (webhook falhou)"
+            NotificationStatus.REJECTED -> "Rejeitada"
+            NotificationStatus.AUTO_SUCCESS -> "Automática (webhook OK)"
+            NotificationStatus.AUTO_ERROR -> "Automática (webhook falhou)"
+            NotificationStatus.HIDDEN -> "Ocultada"
+            else -> "Desconhecido"
         }
         
-        val detalhes = """
+        var detalhes = """
             📦 App: $appName
             
             📝 Título: ${notification.title ?: "(sem título)"}
@@ -310,6 +426,14 @@ class NotificationListActivity : AppCompatActivity() {
             
             ${if (notification.ruleId != null) "⚡ Regra ID: ${notification.ruleId}" else ""}
         """.trimIndent()
+        
+        if (!notification.webhookError.isNullOrBlank()) {
+            detalhes += "\n\n❌ Erro: ${notification.webhookError}"
+        }
+        
+        if (!notification.webhookResponse.isNullOrBlank()) {
+            detalhes += "\n\n📥 Resposta: ${notification.webhookResponse}"
+        }
         
         AlertDialog.Builder(this)
             .setTitle("Detalhes da Notificação")

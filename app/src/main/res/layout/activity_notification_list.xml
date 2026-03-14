@@ -24,7 +24,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="📥"
+            android:text="📥 0"
             android:textSize="14sp"
             android:alpha="1.0"
             android:tag="all"/>
@@ -36,7 +36,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="⏳"
+            android:text="⏳ 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="pending"/>
@@ -48,7 +48,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="🤖"
+            android:text="🤖 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="auto"/>
@@ -60,7 +60,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="🙈"
+            android:text="🙈 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="hidden"/>
@@ -84,7 +84,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="🌐"
+            android:text="🌐 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="webhook_success"/>
@@ -96,7 +96,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="⚠️"
+            android:text="⚠️ 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="webhook_error"/>
@@ -108,7 +108,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="✅"
+            android:text="✅ 0"
             android:textSize="28sp"
             android:alpha="0.5"
             android:tag="approved"/>
@@ -120,7 +120,7 @@
             android:layout_weight="1"
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
-            android:text="❌"
+            android:text="❌ 0"
             android:textSize="14sp"
             android:alpha="0.5"
             android:tag="rejected"/>
@@ -140,7 +140,7 @@
             android:padding="8dp"/>
     </ScrollView>
 
-    <!-- Barra inferior com ações (ordem: +25, 🔄, 🗑️) -->
+    <!-- Barra inferior com ações -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -181,6 +181,17 @@
             android:layout_margin="4dp"
             android:background="@drawable/filter_button_background"
             android:text="🗑️"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="⚙️"
             android:textSize="30sp"
             android:padding="8dp"/>
 

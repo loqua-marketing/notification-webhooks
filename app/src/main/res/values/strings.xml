@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Notification Auto</string>
+    <string name="app_name">Notification WEBHOOKS</string>
     <string name="notification_listener_name">Notification Listener</string>
     
     <!-- Main Activity -->

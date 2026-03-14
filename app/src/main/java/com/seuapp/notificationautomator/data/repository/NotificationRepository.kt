@@ -78,9 +78,10 @@ class NotificationRepository(context: Context) {
 
         // Debug: mostrar estatísticas da BD
         coroutineScope.launch {
-        debugDatabaseStats()
+            debugDatabaseStats()
         }
     }
+    
     // 🆕 Inicializar ML
     suspend fun initializeML() {
         if (FeatureFlags.ML_ENABLED) {
@@ -112,7 +113,7 @@ class NotificationRepository(context: Context) {
     private fun carregarPagina(page: Int, filterType: FilterType) {
         coroutineScope.launch {
             try {
-                    _isLoadingMore.postValue(true)
+                _isLoadingMore.postValue(true)
 
                 val offset = page * PAGE_SIZE
                 val notifications = when (filterType) {
@@ -228,7 +229,7 @@ class NotificationRepository(context: Context) {
             notificationDao.hideSimilarNotifications(packageName, title)
             // Recarregar a página atual
             carregarPrimeiraPagina(currentFilterType)
-            Log.d(TAG, "🙈 Notificações similares ocultadas: $packageName - $title")
+            Log.d(TAG, "🙈 Notificações similares ocultadas: $packageName - ${title ?: "sem título"}")
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao ocultar notificações", e)
         }
@@ -312,12 +313,12 @@ class NotificationRepository(context: Context) {
                 
                 val notification = Notification(
                     packageName = packageName,
-                    title = title,
-                    text = text,
+                    title = title ?: "",
+                    text = text ?: "",
                     timestamp = System.currentTimeMillis(),
                     status = statusInicial,
                     ruleId = regraAplicavel?.id,
-                    webhookUrl = regraAplicavel?.webhookUrl,
+                    webhookUrl = regraAplicavel?.webhookUrl ?: "",
                     webhookStatus = if (regraAplicavel != null) WebhookStatus.PENDING else null,
                     category = null,
                     categoryConfidence = null,
@@ -558,7 +559,7 @@ class NotificationRepository(context: Context) {
                 notificationDao.update(notification.copy(
                     status = novoStatus,
                     ruleId = regraAplicavel.id,
-                    webhookUrl = regraAplicavel.webhookUrl,
+                    webhookUrl = regraAplicavel.webhookUrl ?: "",
                     webhookStatus = WebhookStatus.PENDING
                 ))
                 
@@ -589,9 +590,8 @@ class NotificationRepository(context: Context) {
         timeWindowMs: Long
     ): Int {
         val cutoffTime = System.currentTimeMillis() - timeWindowMs
-        return notificationDao.getRecentNotificationCount(packageName, title, text, cutoffTime)
+        return notificationDao.getRecentNotificationCount(packageName, title ?: "", text ?: "", cutoffTime)
     }
-    
     
     suspend fun mostrarNotificacoesIguais(packageName: String, title: String?) {
         try {
@@ -599,13 +599,11 @@ class NotificationRepository(context: Context) {
             notificationDao.mostrarNotificacoesIguais(packageName, title)
             // Recarregar a página atual
             carregarPrimeiraPagina(currentFilterType)
-            Log.d(TAG, "👁️ Notificações similares mostradas novamente: $packageName - $title")
+            Log.d(TAG, "👁️ Notificações similares mostradas novamente: $packageName - ${title ?: "sem título"}")
         } catch (e: Exception) {
             Log.e(TAG, "Erro ao mostrar notificações", e)
         }
     }
-
-
 
     suspend fun getVisibleCount(): Int {
         val count = notificationDao.getVisibleCount()
@@ -636,9 +634,6 @@ class NotificationRepository(context: Context) {
         Log.d("NotificationRepo", "📊 getCountByWebhookStatus($webhookStatus) = $count")
         return count
     }
-
-
-
 
     suspend fun atualizarWebhookStatus(
         id: Long,
@@ -683,9 +678,6 @@ class NotificationRepository(context: Context) {
             Log.e(TAG, "Erro ao fazer debug DB", e)
         }
     }
-
-
-
 
     fun updateNotificationStatus(id: Long, status: NotificationStatus) {
         coroutineScope.launch {

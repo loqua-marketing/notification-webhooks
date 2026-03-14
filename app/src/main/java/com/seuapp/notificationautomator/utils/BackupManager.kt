@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
+import android.widget.Toast
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.seuapp.notificationautomator.data.model.Rule
@@ -29,6 +30,7 @@ class BackupManager(private val context: Context) {
                 if (rules.isEmpty()) {
                     withContext(Dispatchers.Main) {
                         callback(false, "No rules to export")
+                        Toast.makeText(context, "❌ Nenhuma regra para exportar", Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -60,10 +62,12 @@ class BackupManager(private val context: Context) {
                     
                     withContext(Dispatchers.Main) {
                         callback(true, file.absolutePath)
+                        Toast.makeText(context, "📤 Regras exportadas com sucesso!", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     withContext(Dispatchers.Main) {
                         callback(false, "Cannot access external storage")
+                        Toast.makeText(context, "❌ Erro ao aceder ao armazenamento", Toast.LENGTH_SHORT).show()
                     }
                 }
                 
@@ -71,6 +75,7 @@ class BackupManager(private val context: Context) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     callback(false, "Error: ${e.message}")
+                    Toast.makeText(context, "❌ Erro: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -85,6 +90,7 @@ class BackupManager(private val context: Context) {
                 if (json.isNullOrEmpty()) {
                     withContext(Dispatchers.Main) {
                         callback(false, "Empty file")
+                        Toast.makeText(context, "❌ Ficheiro vazio", Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -97,6 +103,7 @@ class BackupManager(private val context: Context) {
                 if (backup.version != 1) {
                     withContext(Dispatchers.Main) {
                         callback(false, "Unsupported backup version")
+                        Toast.makeText(context, "❌ Versão de backup não suportada", Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -112,12 +119,14 @@ class BackupManager(private val context: Context) {
                 
                 withContext(Dispatchers.Main) {
                     callback(true, "Imported $imported rules")
+                    Toast.makeText(context, "📥 $imported regras importadas com sucesso!", Toast.LENGTH_SHORT).show()
                 }
                 
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
                     callback(false, "Error: ${e.message}")
+                    Toast.makeText(context, "❌ Erro: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }

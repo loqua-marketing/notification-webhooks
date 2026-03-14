@@ -15,6 +15,19 @@ import com.seuapp.notificationautomator.data.model.ActionType
 import com.seuapp.notificationautomator.data.model.Rule
 import com.seuapp.notificationautomator.ui.viewmodel.RuleViewModel
 import java.util.*
+import com.seuapp.notificationautomator.data.model.SavedWebhook
+import com.seuapp.notificationautomator.data.model.SecurityConfig
+import com.seuapp.notificationautomator.data.model.AuthType
+import com.seuapp.notificationautomator.data.model.AdvancedWebhookConfig
+import com.seuapp.notificationautomator.data.repository.WebhookRepository
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
+
 
 class RuleCreateActivity : AppCompatActivity() {
     
@@ -22,6 +35,51 @@ class RuleCreateActivity : AppCompatActivity() {
     private val TAG = "RuleCreateActivity"
     private val gson = Gson()
     
+    override fun onBackPressed() {
+        if (currentStep > 1) {
+            setupStep(currentStep - 1)
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    // WebhookRepository para endereços guardados
+    private lateinit var webhookRepository: WebhookRepository
+
+    // Lista de webhooks guardados
+    private var savedWebhooks: List<SavedWebhook> = emptyList()
+
+    // Novas configurações
+    private var securityConfig: SecurityConfig = SecurityConfig()
+    private var advancedConfig: AdvancedWebhookConfig = AdvancedWebhookConfig()
+    private var selectedWebhookName: String? = null
+
+    // Views do step 3
+    private lateinit var actWebhookUrl: EditText
+    private lateinit var etWebhookName: EditText
+    private lateinit var btnSaveWebhook: Button
+    private lateinit var btnTestWebhook: Button
+    private lateinit var btnDeleteWebhook: Button
+    private lateinit var layoutSavedWebhooks: LinearLayout
+    private lateinit var cbSignHmac: CheckBox
+    private lateinit var layoutHmacSecret: LinearLayout
+    private lateinit var etHmacSecret: EditText
+    private lateinit var rgAuthType: RadioGroup
+    private lateinit var layoutAuthBasic: LinearLayout
+    private lateinit var etAuthUsername: EditText
+    private lateinit var etAuthPassword: EditText
+    private lateinit var layoutAuthBearer: LinearLayout
+    private lateinit var etAuthToken: EditText
+    private lateinit var layoutAuthApiKey: LinearLayout
+    private lateinit var etAuthKeyName: EditText
+    private lateinit var etAuthKeyValue: EditText
+    private lateinit var etHeadersAdvanced: EditText
+    private lateinit var etTimeout: EditText
+    private lateinit var etRetries: EditText
+    private lateinit var rgPayloadType: RadioGroup
+    private lateinit var etCustomPayload: EditText
+    private lateinit var cbWaitForResponse: CheckBox
+
     // Views do stepper
     private lateinit var tvStep1: TextView
     private lateinit var tvStep2: TextView
@@ -96,6 +154,8 @@ class RuleCreateActivity : AppCompatActivity() {
         Log.d(TAG, "Aplicar regra à notificação $notificationId: $applyRuleNow")
         
         initViews()
+        webhookRepository = WebhookRepository.getInstance(this)
+        webhookRepository.initDefaultWebhookIfNeeded()
         setupViewModel()
         setupStep(1)
     }
@@ -124,6 +184,14 @@ class RuleCreateActivity : AppCompatActivity() {
                 }
             }
             ruleName = rule.name
+            
+            if (!rule.securityConfig.isNullOrEmpty()) {
+                securityConfig = gson.fromJson(rule.securityConfig, SecurityConfig::class.java)
+            }
+            if (!rule.advancedConfig.isNullOrEmpty()) {
+                advancedConfig = gson.fromJson(rule.advancedConfig, AdvancedWebhookConfig::class.java)
+            }
+            selectedWebhookName = rule.selectedWebhookName
             
             Log.d(TAG, "Regra carregada: $ruleName - Package: $selectedAppPackage")
             
@@ -161,7 +229,13 @@ class RuleCreateActivity : AppCompatActivity() {
             when (step) {
                 1 -> showStepApp()
                 2 -> showStepConditions()
-                3 -> showStepAction()
+                3 -> {
+                    showStepAction()
+                    if (selectedWebhookName != null) {
+                        val webhook = savedWebhooks.find { it.name == selectedWebhookName }
+                        webhook?.let { carregarDadosWebhook(it) }
+                    }
+                }
                 4 -> showStepReview()
             }
         } catch (e: Exception) {
@@ -170,6 +244,12 @@ class RuleCreateActivity : AppCompatActivity() {
         }
         
         btnPrevious.isEnabled = step > 1
+        btnPrevious.setOnClickListener {
+            if (step > 1) {
+                setupStep(step - 1)
+            }
+        }
+        
         btnNext.visibility = if (step < 4) View.VISIBLE else View.GONE
         btnSave.visibility = if (step == 4) View.VISIBLE else View.GONE
     }
@@ -201,7 +281,6 @@ class RuleCreateActivity : AppCompatActivity() {
         val appNames = apps.map { it.first }
         val appPackages = apps.map { it.second }
         
-        // Criar lista combinada (nome + package) para mostrar no spinner
         val appDisplayList = apps.map { (name, pkg) ->
             "$name ($pkg)"
         }
@@ -215,38 +294,24 @@ class RuleCreateActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerApps.adapter = adapter
         
-        Log.d(TAG, "Apps disponíveis:")
-        apps.forEachIndexed { index, (name, pkg) ->
-            Log.d(TAG, "   $index: $name - $pkg")
-        }
-        
-        // PRÉ-SELECIONAR A APP DA NOTIFICAÇÃO (se existir)
         var initialSelection = 0
         if (notificationPackage != null) {
             val pkg = notificationPackage!!
-            Log.d(TAG, "🔍 Procurando package da notificação: $pkg")
             val index = appPackages.indexOfFirst { it == pkg }
             if (index >= 0) {
                 initialSelection = index
                 selectedAppPackage = pkg
                 selectedAppName = appNames[index]
-                Log.d(TAG, "✅ App encontrada: ${appNames[index]} no índice $index")
-            } else {
-                Log.d(TAG, "❌ Package não encontrado na lista")
             }
         } else if (selectedAppPackage != null) {
-            // Se já temos uma app selecionada (modo edição), encontrar o índice
             val index = appPackages.indexOfFirst { it == selectedAppPackage }
             if (index >= 0) {
                 initialSelection = index
-                Log.d(TAG, "📝 Modo edição: app selecionada ${appNames[index]}")
             }
         }
         
-        // Garantir que o spinner está a usar o índice correto
         spinnerApps.setSelection(initialSelection)
         
-        // Atualizar os textos com a app selecionada
         val selectedIndex = spinnerApps.selectedItemPosition
         selectedAppPackage = appPackages[selectedIndex]
         selectedAppName = appNames[selectedIndex]
@@ -259,7 +324,6 @@ class RuleCreateActivity : AppCompatActivity() {
                 selectedAppName = appNames[position]
                 tvSelectedApp.text = "App selecionada: ${appNames[position]}"
                 tvPackageHint.text = "Package: ${appPackages[position]}"
-                Log.d(TAG, "App selecionada: ${appNames[position]} - ${appPackages[position]}")
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
@@ -296,28 +360,16 @@ class RuleCreateActivity : AppCompatActivity() {
     private fun getInstalledApps(): List<Pair<String, String>> {
         return try {
             val pm = packageManager
-            // NÃO filtrar - obter TODAS as apps instaladas (incluindo sistema)
             val apps = pm.getInstalledApplications(0)
             
-            // Mapear para (nome, package)
             val mappedApps = apps.map { app ->
                 val name = try {
                     pm.getApplicationLabel(app).toString()
                 } catch (e: Exception) {
-                    // Se não conseguir obter o nome, usar o package name
                     app.packageName.substringAfterLast(".").replaceFirstChar { it.uppercase() }
                 }
                 name to app.packageName
-            }.sortedBy { it.first } // Ordenar por nome
-            
-            Log.d(TAG, "📱 Total de apps encontradas (incluindo sistema): ${mappedApps.size}")
-            
-            // Debug: mostrar algumas apps de sistema
-            val systemApps = mappedApps.filter { it.second.startsWith("android.") || it.second.startsWith("com.android.") }
-            Log.d(TAG, "⚙️ Apps de sistema encontradas: ${systemApps.size}")
-            systemApps.take(5).forEach { (name, pkg) ->
-                Log.d(TAG, "   📌 $name - $pkg")
-            }
+            }.sortedBy { it.first }
             
             mappedApps
         } catch (e: Exception) {
@@ -337,7 +389,6 @@ class RuleCreateActivity : AppCompatActivity() {
         val etHourFrom = view.findViewById<EditText>(R.id.etHourFrom)
         val etHourTo = view.findViewById<EditText>(R.id.etHourTo)
         
-        // NOVOS: Checkbox para ativar dias específicos e layout dos dias
         val cbEnableSpecificDays = view.findViewById<CheckBox>(R.id.cbEnableSpecificDays)
         val layoutDays = view.findViewById<LinearLayout>(R.id.layoutDays)
         
@@ -353,38 +404,26 @@ class RuleCreateActivity : AppCompatActivity() {
         val rgNotificationType = view.findViewById<RadioGroup>(R.id.rgNotificationType)
         val cbHasImage = view.findViewById<CheckBox>(R.id.cbHasImage)
         
-        // ===== 1. CARREGAR DADOS EXISTENTES DA REGRA (se houver) =====
         titleContains?.let { etTitleContains.setText(it) }
         textContains?.let { etTextContains.setText(it) }
         
-        // HORÁRIO - INICIAR DESMARCADO
         cbEnableTime.isChecked = false
         layoutTime.visibility = View.GONE
-        etHourFrom.hint = "09:00"  // Placeholder
-        etHourTo.hint = "18:00"     // Placeholder
-        etHourFrom.setText("09:00")  // 👈 NOVO: Pré-preenchido
-        etHourTo.setText("18:00")    // 👈 NOVO: Pré-preenchido
         
         if (hourFrom != null && hourTo != null) {
             cbEnableTime.isChecked = true
             layoutTime.visibility = View.VISIBLE
             etHourFrom.setText(hourFrom)
             etHourTo.setText(hourTo)
-            etHourFrom.hint = ""  // Limpar placeholder quando tem valor
-            etHourTo.hint = ""
         }
         
-        // ===== DIAS DA SEMANA =====
-        // Por defeito: "Ativar dias específicos" DESATIVADO
         cbEnableSpecificDays.isChecked = false
         layoutDays.visibility = View.GONE
         
-        // Se há dados existentes na regra, carregá-los
         if (selectedDays.isNotEmpty()) {
             cbEnableSpecificDays.isChecked = true
             layoutDays.visibility = View.VISIBLE
             
-            // Desmarcar todos primeiro
             cbMonday.isChecked = false
             cbTuesday.isChecked = false
             cbWednesday.isChecked = false
@@ -393,7 +432,6 @@ class RuleCreateActivity : AppCompatActivity() {
             cbSaturday.isChecked = false
             cbSunday.isChecked = false
             
-            // Marcar os dias selecionados
             selectedDays.forEach { day ->
                 when (day) {
                     "MONDAY" -> cbMonday.isChecked = true
@@ -405,11 +443,6 @@ class RuleCreateActivity : AppCompatActivity() {
                     "SUNDAY" -> cbSunday.isChecked = true
                 }
             }
-            
-            // Verificar se todos estão marcados para atualizar cbAllDays
-            cbAllDays.isChecked = cbMonday.isChecked && cbTuesday.isChecked && 
-                                  cbWednesday.isChecked && cbThursday.isChecked && 
-                                  cbFriday.isChecked && cbSaturday.isChecked && cbSunday.isChecked
         }
         
         when (isSilent) {
@@ -420,26 +453,15 @@ class RuleCreateActivity : AppCompatActivity() {
         
         cbHasImage.isChecked = hasImage
         
-        // ===== 2. PRÉ-PREENCHER COM DADOS DA NOTIFICAÇÃO (se for criação nova) =====
         if (!isEditMode && !isDuplicateMode && notificationTimestamp > 0) {
-            
-            // Pré-preencher título (se ainda não foi preenchido)
             if (etTitleContains.text.isNullOrBlank() && !notificationTitle.isNullOrBlank()) {
                 etTitleContains.setText(notificationTitle)
-                Log.d(TAG, "📝 Título pré-preenchido: $notificationTitle")
             }
-            
-            // Pré-preencher texto (se ainda não foi preenchido)
             if (etTextContains.text.isNullOrBlank() && !notificationText.isNullOrBlank()) {
                 etTextContains.setText(notificationText)
-                Log.d(TAG, "💬 Texto pré-preenchido: $notificationText")
             }
-            
-            // NÃO pré-preencher horário - manter desmarcado com placeholders
-            // NÃO pré-preencher dias - manter "Ativar dias específicos" desativado
         }
         
-        // ===== 3. LISTENERS =====
         cbEnableTime.setOnCheckedChangeListener { _, isChecked ->
             layoutTime.visibility = if (isChecked) View.VISIBLE else View.GONE
             if (!isChecked) {
@@ -448,12 +470,9 @@ class RuleCreateActivity : AppCompatActivity() {
             }
         }
         
-        // Listener para "Ativar dias específicos"
         cbEnableSpecificDays.setOnCheckedChangeListener { _, isChecked ->
             layoutDays.visibility = if (isChecked) View.VISIBLE else View.GONE
-            
             if (isChecked) {
-                // Quando ativar, selecionar o dia atual por defeito
                 val calendar = Calendar.getInstance()
                 cbMonday.isChecked = false
                 cbTuesday.isChecked = false
@@ -472,13 +491,9 @@ class RuleCreateActivity : AppCompatActivity() {
                     Calendar.SATURDAY -> cbSaturday.isChecked = true
                     Calendar.SUNDAY -> cbSunday.isChecked = true
                 }
-                
-                // Atualizar estado do "Todos"
-                cbAllDays.isChecked = false
             }
         }
         
-        // Listener para "Todos"
         cbAllDays.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 cbMonday.isChecked = true
@@ -491,12 +506,11 @@ class RuleCreateActivity : AppCompatActivity() {
             }
         }
         
-        // Quando qualquer dia individual é (des)marcado, atualizar o estado de "Todos"
         val dayCheckListener = CompoundButton.OnCheckedChangeListener { _, _ ->
             val allChecked = cbMonday.isChecked && cbTuesday.isChecked && 
                              cbWednesday.isChecked && cbThursday.isChecked && 
                              cbFriday.isChecked && cbSaturday.isChecked && cbSunday.isChecked
-            cbAllDays.setOnCheckedChangeListener(null) // Remover listener temporariamente
+            cbAllDays.setOnCheckedChangeListener(null)
             cbAllDays.isChecked = allChecked
             cbAllDays.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
@@ -532,10 +546,8 @@ class RuleCreateActivity : AppCompatActivity() {
                 hourTo = null
             }
             
-            // Processar dias da semana
             selectedDays.clear()
             if (cbEnableSpecificDays.isChecked) {
-                // Se "Ativar dias específicos" está marcado, usar os dias selecionados
                 if (cbMonday.isChecked) selectedDays.add("MONDAY")
                 if (cbTuesday.isChecked) selectedDays.add("TUESDAY")
                 if (cbWednesday.isChecked) selectedDays.add("WEDNESDAY")
@@ -544,7 +556,6 @@ class RuleCreateActivity : AppCompatActivity() {
                 if (cbSaturday.isChecked) selectedDays.add("SATURDAY")
                 if (cbSunday.isChecked) selectedDays.add("SUNDAY")
             } else {
-                // Se NÃO está marcado, considerar TODOS os dias
                 selectedDays.addAll(listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"))
             }
             
@@ -562,65 +573,607 @@ class RuleCreateActivity : AppCompatActivity() {
     
     private fun showStepAction() {
         val inflater = LayoutInflater.from(this)
-        val view = inflater.inflate(R.layout.step_action, container, true)
+        val view = inflater.inflate(R.layout.step_action_new, container, true)
+        
+        try {
+            actWebhookUrl = view.findViewById(R.id.actWebhookUrl)
+            etWebhookName = view.findViewById(R.id.etWebhookName)
+            btnSaveWebhook = view.findViewById(R.id.btnSaveWebhook)
+            btnTestWebhook = view.findViewById(R.id.btnTestWebhook)
+            btnDeleteWebhook = view.findViewById(R.id.btnDeleteWebhook)
+            layoutSavedWebhooks = view.findViewById(R.id.layoutSavedWebhooks)
+            cbSignHmac = view.findViewById(R.id.cbSignHmac)
+            layoutHmacSecret = view.findViewById(R.id.layoutHmacSecret)
+            etHmacSecret = view.findViewById(R.id.etHmacSecret)
+            rgAuthType = view.findViewById(R.id.rgAuthType)
+            layoutAuthBasic = view.findViewById(R.id.layoutAuthBasic)
+            etAuthUsername = view.findViewById(R.id.etAuthUsername)
+            etAuthPassword = view.findViewById(R.id.etAuthPassword)
+            layoutAuthBearer = view.findViewById(R.id.layoutAuthBearer)
+            etAuthToken = view.findViewById(R.id.etAuthToken)
+            layoutAuthApiKey = view.findViewById(R.id.layoutAuthApiKey)
+            etAuthKeyName = view.findViewById(R.id.etAuthKeyName)
+            etAuthKeyValue = view.findViewById(R.id.etAuthKeyValue)
+            etHeadersAdvanced = view.findViewById(R.id.etHeadersAdvanced)
+            etTimeout = view.findViewById(R.id.etTimeout)
+            etRetries = view.findViewById(R.id.etRetries)
+            rgPayloadType = view.findViewById(R.id.rgPayloadType)
+            etCustomPayload = view.findViewById(R.id.etCustomPayload)
+            cbWaitForResponse = view.findViewById(R.id.cbWaitForResponse)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao inicializar views: ${e.message}")
+            Toast.makeText(this, "Erro no layout: ${e.message}", Toast.LENGTH_LONG).show()
+            return
+        }
         
         val rgActionType = view.findViewById<RadioGroup>(R.id.rgActionType)
-        val layoutWebhookUrl = view.findViewById<LinearLayout>(R.id.layoutWebhookUrl)
-        val etWebhookUrl = view.findViewById<EditText>(R.id.etWebhookUrl)
-        val etHeaders = view.findViewById<EditText>(R.id.etHeaders)
         
         when (actionType) {
             ActionType.WEBHOOK_AUTO -> rgActionType.check(R.id.rbWebhookAuto)
             ActionType.WEBHOOK_AUTH -> rgActionType.check(R.id.rbWebhookAuth)
         }
         
-        webhookUrl?.let { etWebhookUrl.setText(it) }
-        webhookHeaders?.let {
-            etHeaders.setText(gson.toJson(it))
-        }
-        
         rgActionType.setOnCheckedChangeListener { _, checkedId ->
-            when (checkedId) {
-                R.id.rbWebhookAuto -> {
-                    actionType = ActionType.WEBHOOK_AUTO
-                    layoutWebhookUrl.visibility = View.VISIBLE
-                }
-                R.id.rbWebhookAuth -> {
-                    actionType = ActionType.WEBHOOK_AUTH
-                    layoutWebhookUrl.visibility = View.VISIBLE
-                }
+            actionType = when (checkedId) {
+                R.id.rbWebhookAuto -> ActionType.WEBHOOK_AUTO
+                R.id.rbWebhookAuth -> ActionType.WEBHOOK_AUTH
+                else -> ActionType.WEBHOOK_AUTO
             }
         }
         
-        btnPrevious.setOnClickListener { setupStep(2) }
-        btnNext.setOnClickListener {
-            webhookUrl = etWebhookUrl.text.toString().takeIf { it.isNotBlank() }
+        carregarWebhooksGuardados()
+        webhookUrl?.let { actWebhookUrl.setText(it) }
+        
+        if (isEditMode && selectedWebhookName != null) {
+            val webhook = savedWebhooks.find { it.name == selectedWebhookName }
+            webhook?.let { carregarDadosWebhook(it) }
+        } else {
+            carregarConfiguracoesDasVariaveis()
+        }
+        
+        btnSaveWebhook.setOnClickListener {
+            val url = actWebhookUrl.text.toString().trim()
+            val name = etWebhookName.text.toString().trim()
             
-            val headersText = etHeaders.text.toString()
-            if (headersText.isNotBlank()) {
-                try {
-                    val type = object : TypeToken<Map<String, String>>() {}.type
-                    webhookHeaders = gson.fromJson(headersText, type)
-                } catch (e: Exception) {
-                    Toast.makeText(this@RuleCreateActivity, "Headers inválidos. Use formato JSON", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-            }
-            
-            if (webhookUrl == null) {
-                Toast.makeText(this@RuleCreateActivity, "URL do webhook é obrigatório", Toast.LENGTH_SHORT).show()
+            if (url.isEmpty() || name.isEmpty()) {
+                Toast.makeText(this, "Nome e URL são obrigatórios", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             
-            setupStep(4)
+            val authType = when (rgAuthType.checkedRadioButtonId) {
+                R.id.rbAuthBasic -> AuthType.BASIC
+                R.id.rbAuthBearer -> AuthType.BEARER
+                R.id.rbAuthApiKey -> AuthType.API_KEY
+                else -> AuthType.NONE
+            }
+            
+            val currentSecurityConfig = SecurityConfig(
+                signWithHmac = cbSignHmac.isChecked,
+                hmacSecret = if (cbSignHmac.isChecked) etHmacSecret.text.toString() else null,
+                pgpEnabled = false,
+                pgpPublicKey = null,
+                pgpFormat = null,
+                auth = com.seuapp.notificationautomator.data.model.AuthConfig(
+                    type = authType,
+                    username = if (authType == AuthType.BASIC) etAuthUsername.text.toString() else null,
+                    password = if (authType == AuthType.BASIC) etAuthPassword.text.toString() else null,
+                    token = if (authType == AuthType.BEARER) etAuthToken.text.toString() else null,
+                    apiKeyName = if (authType == AuthType.API_KEY) etAuthKeyName.text.toString() else null,
+                    apiKeyValue = if (authType == AuthType.API_KEY) etAuthKeyValue.text.toString() else null
+                )
+            )
+            
+            val currentHeaders = try {
+                val headersText = etHeadersAdvanced.text.toString()
+                if (headersText.isNotBlank()) {
+                    val type = object : TypeToken<Map<String, String>>() {}.type
+                    gson.fromJson(headersText, type)
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+            
+            if (selectedWebhookName != null) {
+                webhookRepository.updateWebhook(
+                    oldName = selectedWebhookName!!,
+                    newName = name,
+                    newUrl = url,
+                    securityConfig = currentSecurityConfig,
+                    headers = currentHeaders,
+                    timeoutSeconds = etTimeout.text.toString().toIntOrNull() ?: 10,
+                    maxRetries = etRetries.text.toString().toIntOrNull() ?: 3,
+                    useCustomPayload = rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom,
+                    customPayloadTemplate = if (rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom) 
+                        etCustomPayload.text.toString() else null,
+                    waitForResponse = cbWaitForResponse.isChecked
+                )
+                selectedWebhookName = name
+                Toast.makeText(this, "✅ Webhook atualizado!", Toast.LENGTH_SHORT).show()
+            } else {
+                val saved = webhookRepository.saveWebhook(
+                    name = name,
+                    url = url,
+                    securityConfig = currentSecurityConfig,
+                    headers = currentHeaders,
+                    timeoutSeconds = etTimeout.text.toString().toIntOrNull() ?: 10,
+                    maxRetries = etRetries.text.toString().toIntOrNull() ?: 3,
+                    useCustomPayload = rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom,
+                    customPayloadTemplate = if (rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom) 
+                        etCustomPayload.text.toString() else null,
+                    waitForResponse = cbWaitForResponse.isChecked
+                )
+                selectedWebhookName = saved.name
+                Toast.makeText(this, "✅ Webhook guardado!", Toast.LENGTH_SHORT).show()
+            }
+            
+            carregarWebhooksGuardados()
+        }
+        
+        btnTestWebhook.setOnClickListener {
+            val url = actWebhookUrl.text.toString().trim()
+            if (url.isEmpty()) {
+                Toast.makeText(this, "URL é obrigatório", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            testarWebhook(url)
+        }
+        
+        btnDeleteWebhook.setOnClickListener {
+            if (selectedWebhookName == null) {
+                Toast.makeText(this, "Seleciona um webhook", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Eliminar")
+                .setMessage("Eliminar '${selectedWebhookName}'?")
+                .setPositiveButton("Sim") { _, _ ->
+                    webhookRepository.deleteWebhook(selectedWebhookName!!)
+                    selectedWebhookName = null
+                    actWebhookUrl.text.clear()
+                    etWebhookName.text.clear()
+                    carregarWebhooksGuardados()
+                    Toast.makeText(this, "Webhook eliminado", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Não", null)
+                .show()
+        }
+        
+        cbSignHmac.setOnCheckedChangeListener { _, isChecked ->
+            layoutHmacSecret.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+        
+        rgAuthType.setOnCheckedChangeListener { _, checkedId ->
+            layoutAuthBasic.visibility = View.GONE
+            layoutAuthBearer.visibility = View.GONE
+            layoutAuthApiKey.visibility = View.GONE
+            
+            when (checkedId) {
+                R.id.rbAuthBasic -> layoutAuthBasic.visibility = View.VISIBLE
+                R.id.rbAuthBearer -> layoutAuthBearer.visibility = View.VISIBLE
+                R.id.rbAuthApiKey -> layoutAuthApiKey.visibility = View.VISIBLE
+            }
+        }
+        
+        webhookHeaders?.let {
+            etHeadersAdvanced.setText(gson.toJson(it))
+        }
+        
+        view.findViewById<Button>(R.id.btnTemplateN8n)?.setOnClickListener {
+            etHeadersAdvanced.setText("""{"Content-Type": "application/json", "User-Agent": "n8n"}""")
+        }
+        
+        view.findViewById<Button>(R.id.btnTemplateZapier)?.setOnClickListener {
+            etHeadersAdvanced.setText("""{"Content-Type": "application/json", "User-Agent": "Zapier"}""")
+        }
+        
+        view.findViewById<Button>(R.id.btnTemplateIfttt)?.setOnClickListener {
+            etHeadersAdvanced.setText("""{"Content-Type": "application/json", "User-Agent": "IFTTT"}""")
+        }
+        
+        view.findViewById<Button>(R.id.btnTemplateHomeAssistant)?.setOnClickListener {
+            etHeadersAdvanced.setText("""{"Content-Type": "application/json", "User-Agent": "HomeAssistant"}""")
+        }
+        
+        view.findViewById<TextView>(R.id.chipVarId)?.setOnClickListener {
+            inserirVariavelHeader("id", "{{notification.id}}")
+        }
+        
+        view.findViewById<TextView>(R.id.chipVarTitle)?.setOnClickListener {
+            inserirVariavelHeader("title", "{{notification.title}}")
+        }
+        
+        view.findViewById<TextView>(R.id.chipVarText)?.setOnClickListener {
+            inserirVariavelHeader("text", "{{notification.text}}")
+        }
+        
+        view.findViewById<TextView>(R.id.chipVarPackage)?.setOnClickListener {
+            inserirVariavelHeader("package", "{{notification.package}}")
+        }
+        
+        view.findViewById<TextView>(R.id.chipVarRule)?.setOnClickListener {
+            inserirVariavelHeader("rule", "{{rule.name}}")
+        }
+        
+        rgPayloadType.setOnCheckedChangeListener { _, checkedId ->
+            etCustomPayload.visibility = if (checkedId == R.id.rbPayloadCustom) View.VISIBLE else View.GONE
+        }
+        
+        carregarConfiguracoesAvancadas()
+        
+        btnPrevious.setOnClickListener { setupStep(2) }
+        btnNext.setOnClickListener {
+            webhookUrl = actWebhookUrl.text.toString().takeIf { it.isNotBlank() }
+            if (salvarConfiguracoesWebhook()) {
+                setupStep(4)
+            }
         }
     }
-    
+
+    private fun carregarConfiguracoesDasVariaveis() {
+        webhookUrl?.let { actWebhookUrl.setText(it) }
+        
+        cbSignHmac.isChecked = securityConfig.signWithHmac
+        if (securityConfig.signWithHmac) {
+            layoutHmacSecret.visibility = View.VISIBLE
+            etHmacSecret.setText(securityConfig.hmacSecret ?: "")
+        }
+        
+        when (securityConfig.auth.type) {
+            AuthType.BASIC -> {
+                rgAuthType.check(R.id.rbAuthBasic)
+                layoutAuthBasic.visibility = View.VISIBLE
+                etAuthUsername.setText(securityConfig.auth.username ?: "")
+                etAuthPassword.setText(securityConfig.auth.password ?: "")
+            }
+            AuthType.BEARER -> {
+                rgAuthType.check(R.id.rbAuthBearer)
+                layoutAuthBearer.visibility = View.VISIBLE
+                etAuthToken.setText(securityConfig.auth.token ?: "")
+            }
+            AuthType.API_KEY -> {
+                rgAuthType.check(R.id.rbAuthApiKey)
+                layoutAuthApiKey.visibility = View.VISIBLE
+                etAuthKeyName.setText(securityConfig.auth.apiKeyName ?: "")
+                etAuthKeyValue.setText(securityConfig.auth.apiKeyValue ?: "")
+            }
+            else -> rgAuthType.check(R.id.rbAuthNone)
+        }
+        
+        webhookHeaders?.let {
+            etHeadersAdvanced.setText(gson.toJson(it))
+        }
+        
+        etTimeout.setText(advancedConfig.timeoutSeconds.toString())
+        etRetries.setText(advancedConfig.maxRetries.toString())
+        
+        if (advancedConfig.useCustomPayload) {
+            rgPayloadType.check(R.id.rbPayloadCustom)
+            etCustomPayload.visibility = View.VISIBLE
+            etCustomPayload.setText(advancedConfig.customPayloadTemplate ?: "")
+        }
+        
+        cbWaitForResponse.isChecked = advancedConfig.waitForResponse
+    }
+
+    private fun carregarDadosWebhook(webhook: SavedWebhook) {
+        actWebhookUrl.setText(webhook.url)
+        etWebhookName.setText(webhook.name)
+        selectedWebhookName = webhook.name
+        
+        webhook.securityConfig?.let { config ->
+            cbSignHmac.isChecked = config.signWithHmac
+            if (config.signWithHmac) {
+                layoutHmacSecret.visibility = View.VISIBLE
+                etHmacSecret.setText(config.hmacSecret ?: "")
+            } else {
+                layoutHmacSecret.visibility = View.GONE
+                etHmacSecret.text.clear()
+            }
+            
+            when (config.auth.type) {
+                AuthType.BASIC -> {
+                    rgAuthType.check(R.id.rbAuthBasic)
+                    layoutAuthBasic.visibility = View.VISIBLE
+                    etAuthUsername.setText(config.auth.username ?: "")
+                    etAuthPassword.setText(config.auth.password ?: "")
+                    layoutAuthBearer.visibility = View.GONE
+                    layoutAuthApiKey.visibility = View.GONE
+                }
+                AuthType.BEARER -> {
+                    rgAuthType.check(R.id.rbAuthBearer)
+                    layoutAuthBearer.visibility = View.VISIBLE
+                    etAuthToken.setText(config.auth.token ?: "")
+                    layoutAuthBasic.visibility = View.GONE
+                    layoutAuthApiKey.visibility = View.GONE
+                }
+                AuthType.API_KEY -> {
+                    rgAuthType.check(R.id.rbAuthApiKey)
+                    layoutAuthApiKey.visibility = View.VISIBLE
+                    etAuthKeyName.setText(config.auth.apiKeyName ?: "")
+                    etAuthKeyValue.setText(config.auth.apiKeyValue ?: "")
+                    layoutAuthBasic.visibility = View.GONE
+                    layoutAuthBearer.visibility = View.GONE
+                }
+                else -> {
+                    rgAuthType.check(R.id.rbAuthNone)
+                    layoutAuthBasic.visibility = View.GONE
+                    layoutAuthBearer.visibility = View.GONE
+                    layoutAuthApiKey.visibility = View.GONE
+                }
+            }
+        } ?: run {
+            cbSignHmac.isChecked = false
+            layoutHmacSecret.visibility = View.GONE
+            etHmacSecret.text.clear()
+            rgAuthType.check(R.id.rbAuthNone)
+            layoutAuthBasic.visibility = View.GONE
+            layoutAuthBearer.visibility = View.GONE
+            layoutAuthApiKey.visibility = View.GONE
+        }
+        
+        if (webhook.headers != null) {
+            etHeadersAdvanced.setText(gson.toJson(webhook.headers))
+        } else {
+            etHeadersAdvanced.text.clear()
+        }
+        
+        etTimeout.setText(webhook.timeoutSeconds.toString())
+        etRetries.setText(webhook.maxRetries.toString())
+        
+        if (webhook.useCustomPayload) {
+            rgPayloadType.check(R.id.rbPayloadCustom)
+            etCustomPayload.visibility = View.VISIBLE
+            etCustomPayload.setText(webhook.customPayloadTemplate ?: "")
+        } else {
+            rgPayloadType.check(R.id.rbPayloadDefault)
+            etCustomPayload.visibility = View.GONE
+            etCustomPayload.text.clear()
+        }
+        
+        cbWaitForResponse.isChecked = webhook.waitForResponse
+    }
+
+    private fun carregarWebhooksGuardados() {
+        if (!::webhookRepository.isInitialized) {
+            Log.e(TAG, "webhookRepository não inicializado!")
+            return
+        }
+        
+        savedWebhooks = webhookRepository.getAllSavedWebhooks()
+        
+        layoutSavedWebhooks.removeAllViews()
+        
+        val cardNovo = layoutInflater.inflate(R.layout.item_saved_webhook, layoutSavedWebhooks, false)
+        
+        val tvNomeNovo = cardNovo.findViewById<TextView>(R.id.tvWebhookName)
+        val tvUrlNovo = cardNovo.findViewById<TextView>(R.id.tvWebhookUrl)
+        val btnUsarNovo = cardNovo.findViewById<Button>(R.id.btnUseWebhook)
+        val btnAtualizarNovo = cardNovo.findViewById<Button>(R.id.btnUpdateWebhook)
+        val btnEliminarNovo = cardNovo.findViewById<Button>(R.id.btnDeleteWebhook)
+        
+        tvNomeNovo.text = "➕ Novo Webhook"
+        tvUrlNovo.text = "http://localhost/"
+        
+        btnAtualizarNovo.visibility = View.GONE
+        btnEliminarNovo.visibility = View.GONE
+        btnUsarNovo.visibility = View.VISIBLE
+        btnUsarNovo.text = "Usar"
+        
+        btnUsarNovo.setOnClickListener {
+            actWebhookUrl.setText("http://localhost/")
+            etWebhookName.setText("")
+            selectedWebhookName = null
+            
+            cbSignHmac.isChecked = false
+            layoutHmacSecret.visibility = View.GONE
+            etHmacSecret.text.clear()
+            
+            rgAuthType.check(R.id.rbAuthNone)
+            layoutAuthBasic.visibility = View.GONE
+            etAuthUsername.text.clear()
+            etAuthPassword.text.clear()
+            layoutAuthBearer.visibility = View.GONE
+            etAuthToken.text.clear()
+            layoutAuthApiKey.visibility = View.GONE
+            etAuthKeyName.text.clear()
+            etAuthKeyValue.text.clear()
+            
+            etHeadersAdvanced.text.clear()
+            
+            etTimeout.setText("10")
+            etRetries.setText("3")
+            rgPayloadType.check(R.id.rbPayloadDefault)
+            etCustomPayload.visibility = View.GONE
+            etCustomPayload.text.clear()
+            cbWaitForResponse.isChecked = false
+            
+            carregarWebhooksGuardados()
+        }
+        
+        layoutSavedWebhooks.addView(cardNovo)
+        
+        if (savedWebhooks.isNotEmpty()) {
+            savedWebhooks.forEach { webhook ->
+                val cardView = layoutInflater.inflate(R.layout.item_saved_webhook, layoutSavedWebhooks, false)
+                
+                val tvName = cardView.findViewById<TextView>(R.id.tvWebhookName)
+                val tvUrl = cardView.findViewById<TextView>(R.id.tvWebhookUrl)
+                val btnUsar = cardView.findViewById<Button>(R.id.btnUseWebhook)
+                val btnAtualizar = cardView.findViewById<Button>(R.id.btnUpdateWebhook)
+                val btnEliminar = cardView.findViewById<Button>(R.id.btnDeleteWebhook)
+                
+                tvName.text = webhook.name
+                tvUrl.text = webhook.url
+                
+                val isSelected = (selectedWebhookName == webhook.name)
+                
+                if (isSelected) {
+                    cardView.setBackgroundColor(0x1F6200EE.toInt())
+                } else {
+                    cardView.setBackgroundColor(0xFFFFFFFF.toInt())
+                }
+                
+                btnUsar.visibility = View.VISIBLE
+                btnAtualizar.visibility = View.GONE
+                btnEliminar.visibility = View.VISIBLE
+                
+                btnUsar.text = "Usar"
+                btnEliminar.text = "Eliminar"
+                
+                btnUsar.setOnClickListener {
+                    carregarDadosWebhook(webhook)
+                    carregarWebhooksGuardados()
+                }
+                
+                btnEliminar.setOnClickListener {
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("Eliminar webhook")
+                        .setMessage("Tens a certeza que queres eliminar '${webhook.name}'?")
+                        .setPositiveButton("Sim") { _, _ ->
+                            webhookRepository.deleteWebhook(webhook.name)
+                            if (selectedWebhookName == webhook.name) {
+                                selectedWebhookName = null
+                                actWebhookUrl.text.clear()
+                                etWebhookName.text.clear()
+                            }
+                            carregarWebhooksGuardados()
+                            Toast.makeText(this, "Webhook eliminado", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Não", null)
+                        .show()
+                }
+                
+                layoutSavedWebhooks.addView(cardView)
+            }
+        }
+    }
+
+    private fun testarWebhook(url: String) {
+        lifecycleScope.launch {
+            try {
+                Toast.makeText(this@RuleCreateActivity, "⏳ A testar...", Toast.LENGTH_SHORT).show()
+                
+                val result = withContext(Dispatchers.IO) {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(5, TimeUnit.SECONDS)
+                        .writeTimeout(5, TimeUnit.SECONDS)
+                        .readTimeout(5, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url(url)
+                        .method("HEAD", null)
+                        .build()
+                    
+                    try {
+                        val response = client.newCall(request).execute()
+                        "✅ Sucesso! Código: ${response.code}"
+                    } catch (e: Exception) {
+                        "❌ Erro: ${e.message}"
+                    }
+                }
+                
+                Toast.makeText(this@RuleCreateActivity, result, Toast.LENGTH_LONG).show()
+                
+            } catch (e: Exception) {
+                Toast.makeText(this@RuleCreateActivity, "❌ Erro: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun inserirVariavelHeader(chave: String, valorVar: String) {
+        val currentText = etHeadersAdvanced.text.toString().trim()
+        val newEntry = "\"$chave\": $valorVar"
+        
+        val newText = when {
+            currentText.isEmpty() || currentText == "{}" -> {
+                "{$newEntry}"
+            }
+            currentText.startsWith("{") && currentText.endsWith("}") -> {
+                currentText.replaceRange(currentText.length-1, currentText.length-1, ", $newEntry")
+            }
+            else -> {
+                "{$newEntry}"
+            }
+        }
+        
+        etHeadersAdvanced.setText(newText)
+    }
+
+    private fun carregarConfiguracoesAvancadas() {
+        etTimeout.setText(advancedConfig.timeoutSeconds.toString())
+        etRetries.setText(advancedConfig.maxRetries.toString())
+        
+        if (advancedConfig.useCustomPayload) {
+            rgPayloadType.check(R.id.rbPayloadCustom)
+            etCustomPayload.visibility = View.VISIBLE
+            advancedConfig.customPayloadTemplate?.let { etCustomPayload.setText(it) }
+        } else {
+            rgPayloadType.check(R.id.rbPayloadDefault)
+            etCustomPayload.visibility = View.GONE
+        }
+        
+        cbWaitForResponse.isChecked = advancedConfig.waitForResponse
+    }
+
+    private fun salvarConfiguracoesWebhook(): Boolean {
+        webhookUrl = actWebhookUrl.text.toString().takeIf { it.isNotBlank() }
+        
+        val headersText = etHeadersAdvanced.text.toString()
+        if (headersText.isNotBlank()) {
+            try {
+                val type = object : TypeToken<Map<String, String>>() {}.type
+                webhookHeaders = gson.fromJson(headersText, type)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Headers inválidos. Use formato JSON", Toast.LENGTH_SHORT).show()
+                return false
+            }
+        } else {
+            webhookHeaders = null
+        }
+        
+        val authType = when (rgAuthType.checkedRadioButtonId) {
+            R.id.rbAuthBasic -> AuthType.BASIC
+            R.id.rbAuthBearer -> AuthType.BEARER
+            R.id.rbAuthApiKey -> AuthType.API_KEY
+            else -> AuthType.NONE
+        }
+        
+        securityConfig = SecurityConfig(
+            signWithHmac = cbSignHmac.isChecked,
+            hmacSecret = if (cbSignHmac.isChecked) etHmacSecret.text.toString() else null,
+            pgpEnabled = false,
+            pgpPublicKey = null,
+            pgpFormat = null,
+            auth = com.seuapp.notificationautomator.data.model.AuthConfig(
+                type = authType,
+                username = if (authType == AuthType.BASIC) etAuthUsername.text.toString() else null,
+                password = if (authType == AuthType.BASIC) etAuthPassword.text.toString() else null,
+                token = if (authType == AuthType.BEARER) etAuthToken.text.toString() else null,
+                apiKeyName = if (authType == AuthType.API_KEY) etAuthKeyName.text.toString() else null,
+                apiKeyValue = if (authType == AuthType.API_KEY) etAuthKeyValue.text.toString() else null
+            )
+        )
+        
+        advancedConfig = AdvancedWebhookConfig(
+            timeoutSeconds = etTimeout.text.toString().toIntOrNull() ?: 10,
+            maxRetries = etRetries.text.toString().toIntOrNull() ?: 3,
+            useCustomPayload = rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom,
+            customPayloadTemplate = if (rgPayloadType.checkedRadioButtonId == R.id.rbPayloadCustom) 
+                etCustomPayload.text.toString() else null,
+            waitForResponse = cbWaitForResponse.isChecked
+        )
+        
+        return true
+    }
+
     private fun showStepReview() {
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.step_review, container, true)
         
-        val tvReviewName = view.findViewById<TextView>(R.id.tvReviewName)
+
         val tvReviewApp = view.findViewById<TextView>(R.id.tvReviewApp)
         val tvReviewConditions = view.findViewById<TextView>(R.id.tvReviewConditions)
         val tvReviewAction = view.findViewById<TextView>(R.id.tvReviewAction)
@@ -679,10 +1232,29 @@ class RuleCreateActivity : AppCompatActivity() {
         
         tvReviewConditions.text = if (conditions.isEmpty()) "Sem condições" else conditions.joinToString("\n")
         
-        tvReviewAction.text = when (actionType) {
-            ActionType.WEBHOOK_AUTO -> "🌐 Webhook automático: $webhookUrl"
-            ActionType.WEBHOOK_AUTH -> "🔐 Webhook com autorização: $webhookUrl"
+        val actionText = StringBuilder()
+        actionText.append(when (actionType) {
+            ActionType.WEBHOOK_AUTO -> "🌐 Webhook automático"
+            ActionType.WEBHOOK_AUTH -> "🔐 Webhook com autorização"
+        })
+
+        val urlToShow = webhookUrl ?: actWebhookUrl.text.toString().takeIf { it.isNotBlank() }
+        actionText.append("\n📌 URL: ${urlToShow ?: "Não definido"}")
+
+        if (securityConfig.signWithHmac) {
+            actionText.append("\n🔏 Assinado com HMAC")
         }
+        if (securityConfig.auth.type != AuthType.NONE) {
+            actionText.append("\n🔑 Auth: ${securityConfig.auth.type}")
+        }
+
+        actionText.append("\n⏱️ Timeout: ${advancedConfig.timeoutSeconds}s, Retries: ${advancedConfig.maxRetries}")
+
+        if (advancedConfig.waitForResponse) {
+            actionText.append("\n⏳ Aguarda resposta do servidor")
+        }
+
+        tvReviewAction.text = actionText.toString()
         
         btnPrevious.setOnClickListener { setupStep(3) }
         btnSave.setOnClickListener {
@@ -691,8 +1263,6 @@ class RuleCreateActivity : AppCompatActivity() {
                 Toast.makeText(this@RuleCreateActivity, "Nome da regra é obrigatório", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            
-            Log.d(TAG, "A guardar regra com package: $selectedAppPackage")
             
             val rule = Rule(
                 id = if (isEditMode) editingRuleId ?: 0 else 0,
@@ -712,31 +1282,27 @@ class RuleCreateActivity : AppCompatActivity() {
                 hasImage = hasImage,
                 actionType = actionType,
                 webhookUrl = webhookUrl,
-                webhookHeaders = gson.toJson(webhookHeaders)
+                webhookHeaders = gson.toJson(webhookHeaders),
+                savedWebhooks = gson.toJson(savedWebhooks),
+                selectedWebhookName = selectedWebhookName,
+                securityConfig = gson.toJson(securityConfig),
+                advancedConfig = gson.toJson(advancedConfig)
             )
             
             if (isEditMode) {
-                // Em modo de edição, a regra já existe
                 viewModel.updateRule(rule)
-                Toast.makeText(this@RuleCreateActivity, "Regra atualizada com sucesso!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@RuleCreateActivity, "Regra atualizada!", Toast.LENGTH_SHORT).show()
                 
                 if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
-                    Log.d(TAG, "A aplicar regra à notificação $notificationId (edição)")
                     viewModel.applyRuleToNotification(rule, notificationId)
                 }
             } else {
-                // Em modo de criação, precisamos do ID da nova regra
                 viewModel.saveRule(rule) { newRuleId ->
-                    Log.d(TAG, "Regra criada com ID: $newRuleId")
-                    
                     if (applyRuleNow && notificationId > 0 && cbApplyToCurrent.isChecked) {
-                        Log.d(TAG, "A aplicar regra à notificação $notificationId com ID $newRuleId")
-                        // Criar uma cópia da regra com o ID correto
                         val ruleWithId = rule.copy(id = newRuleId)
                         viewModel.applyRuleToNotification(ruleWithId, notificationId)
                     }
-                    
-                    Toast.makeText(this@RuleCreateActivity, "Regra criada com sucesso!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@RuleCreateActivity, "Regra criada!", Toast.LENGTH_SHORT).show()
                 }
             }
             

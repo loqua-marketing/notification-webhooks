@@ -12,7 +12,7 @@ import com.seuapp.notificationautomator.data.model.Rule
 
 @Database(
     entities = [Notification::class, Rule::class],
-    version = 4,  // AUMENTAR PARA 4
+    version = 5,  // <-- ALTERADO DE 4 PARA 5
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -32,7 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "notification_database"
                 )
-                .fallbackToDestructiveMigration()  // Forçar recriação em caso de migração
+                .fallbackToDestructiveMigration()  // Isto vai recriar a BD automaticamente
                 .build()
                 INSTANCE = instance
                 instance

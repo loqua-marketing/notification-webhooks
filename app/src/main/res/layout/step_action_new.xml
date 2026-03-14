@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="16dp"
@@ -10,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Título da secção -->
+        <!-- Escolha da ação -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -39,11 +40,11 @@
                 android:text="🔐 Autorizar antes de enviar"/>
         </RadioGroup>
 
-        <!-- ===== 1. GESTÃO DE ENDEREÇOS ===== -->
+        <!-- ===== WEBHOOKS GUARDADOS ===== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📋 GESTÃO DE ENDEREÇOS"
+            android:text="📋 WEBHOOKS GUARDADOS"
             android:textSize="16sp"
             android:textStyle="bold"
             android:background="#F0F0F0"
@@ -51,121 +52,103 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Formulário para novo webhook -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="➕ Adicionar novo webhook"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="12dp"/>
-
-                <!-- Nome -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etWebhookName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Nome do webhook (ex: Produção)"
-                        android:inputType="text"/>
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- URL -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/actWebhookUrl"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="URL do webhook"
-                        android:inputType="textUri"/>
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Botões -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end">
-
-                    <Button
-                        android:id="@+id/btnTestWebhook"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▶️ Testar"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_marginEnd="8dp"/>
-
-                    <Button
-                        android:id="@+id/btnSaveWebhook"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="💾 Guardar"
-                        style="@style/Widget.MaterialComponents.Button"/>
-                </LinearLayout>
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Lista de webhooks guardados -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📚 Webhooks Guardados:"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Container para os cards -->
+        <!-- Lista de webhooks em cards -->
         <LinearLayout
             android:id="@+id/layoutSavedWebhooks"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"/>
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp"/>
 
-        
-        <!-- Separador -->
-        <View
+        <!-- ===== EDITAR WEBHOOK ===== -->
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginTop="24dp"
+            android:layout_height="wrap_content"
+            android:text="✏️ EDITAR WEBHOOK"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="#F0F0F0"
+            android:padding="12dp"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"/>
 
+        <!-- Nome -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        <!-- ===== 2. SEGURANÇA ===== -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etWebhookName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Nome do webhook"
+                android:inputType="text"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- URL -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/actWebhookUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="URL do webhook"
+                android:inputType="textUri"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ===== BOTÕES ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="24dp">
+
+            <Button
+                android:id="@+id/btnTestWebhook"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="▶️ Testar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnSaveWebhook"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="💾 Guardar"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnDeleteWebhook"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🗑️ Eliminar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="#F44336"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
+        <!-- ===== SEGURANÇA ===== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🔐 SEGURANÇA"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             android:background="#F0F0F0"
-            android:padding="8dp"
+            android:padding="12dp"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"/>
 
@@ -175,7 +158,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🏷️ Assinar requests (HMAC-SHA256)"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="4dp"/>
 
         <LinearLayout
             android:id="@+id/layoutHmacSecret"
@@ -190,7 +173,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Chave secreta:"
-                android:textSize="14sp"/>
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etHmacSecret"
@@ -202,74 +186,21 @@
                 android:background="@android:drawable/editbox_background"/>
         </LinearLayout>
 
-        <!-- OpenPGP (simplificado) -->
-        <CheckBox
-            android:id="@+id/cbEnablePgp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📜 OpenPGP (assinatura/criptografia)"
-            android:layout_marginBottom="8dp"/>
-
-        <LinearLayout
-            android:id="@+id/layoutPgp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="12dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chave pública:"
-                android:textSize="14sp"/>
-
-            <EditText
-                android:id="@+id/etPgpKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="-----BEGIN PGP PUBLIC KEY BLOCK-----"
-                android:inputType="textMultiLine"
-                android:lines="3"
-                android:padding="8dp"
-                android:background="@android:drawable/editbox_background"/>
-
-            <RadioGroup
-                android:id="@+id/rgPgpFormat"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="4dp">
-
-                <RadioButton
-                    android:id="@+id/rbPgpAscii"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ASCII Armor"
-                    android:checked="true"/>
-
-                <RadioButton
-                    android:id="@+id/rbPgpBinary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Binário"/>
-            </RadioGroup>
-        </LinearLayout>
-
         <!-- Autenticação -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🛡️ Autenticação:"
             android:textSize="14sp"
-            android:layout_marginTop="8dp"/>
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
 
         <RadioGroup
             android:id="@+id/rgAuthType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_marginBottom="8dp">
 
             <RadioButton
@@ -277,25 +208,29 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Nenhuma"
-                android:checked="true"/>
+                android:checked="true"
+                android:layout_marginBottom="4dp"/>
 
             <RadioButton
                 android:id="@+id/rbAuthBasic"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Basic"/>
+                android:text="Basic Auth"
+                android:layout_marginBottom="4dp"/>
 
             <RadioButton
                 android:id="@+id/rbAuthBearer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bearer"/>
+                android:text="Bearer Token"
+                android:layout_marginBottom="4dp"/>
 
             <RadioButton
                 android:id="@+id/rbAuthApiKey"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="API Key"/>
+                android:text="API Key"
+                android:layout_marginBottom="4dp"/>
         </RadioGroup>
 
         <!-- Basic Auth -->
@@ -312,7 +247,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Username:"
-                android:textSize="14sp"/>
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etAuthUsername"
@@ -320,14 +256,15 @@
                 android:layout_height="wrap_content"
                 android:hint="utilizador"
                 android:padding="8dp"
-                android:background="@android:drawable/editbox_background"/>
+                android:background="@android:drawable/editbox_background"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Password:"
                 android:textSize="14sp"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etAuthPassword"
@@ -353,7 +290,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Token:"
-                android:textSize="14sp"/>
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etAuthToken"
@@ -378,8 +316,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Nome da chave (header):"
-                android:textSize="14sp"/>
+                android:text="Nome da chave:"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etAuthKeyName"
@@ -387,14 +326,15 @@
                 android:layout_height="wrap_content"
                 android:hint="X-API-Key"
                 android:padding="8dp"
-                android:background="@android:drawable/editbox_background"/>
+                android:background="@android:drawable/editbox_background"
+                android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Valor:"
                 android:textSize="14sp"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginBottom="4dp"/>
 
             <EditText
                 android:id="@+id/etAuthKeyValue"
@@ -406,35 +346,25 @@
                 android:background="@android:drawable/editbox_background"/>
         </LinearLayout>
 
-        
-
-        <!-- Separador -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"/>
-
-
-        <!-- ===== 3. HEADERS AVANÇADOS ===== -->
+        <!-- ===== HEADERS AVANÇADOS ===== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📋 HEADERS AVANÇADOS"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             android:background="#F0F0F0"
-            android:padding="8dp"
-            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Headers JSON editável -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Headers fixos (JSON editável):"
-            android:textSize="14sp"/>
+            android:text="Headers (JSON):"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
 
         <EditText
             android:id="@+id/etHeadersAdvanced"
@@ -445,154 +375,144 @@
             android:lines="3"
             android:padding="8dp"
             android:background="@android:drawable/editbox_background"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="12dp"/>
 
-        <!-- Templates pré-definidos -->
+        <!-- Templates -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Templates pré-definidos:"
-            android:textSize="14sp"/>
+            android:text="Templates:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
 
             <Button
                 android:id="@+id/btnTemplateN8n"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="📦 n8n"
-                style="?android:attr/buttonBarButtonStyle"/>
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnTemplateZapier"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="🔌 Zapier"
-                style="?android:attr/buttonBarButtonStyle"/>
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnTemplateIfttt"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="🤖 IFTTT"
-                style="?android:attr/buttonBarButtonStyle"/>
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="4dp"/>
 
             <Button
                 android:id="@+id/btnTemplateHomeAssistant"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🏠 Home"
-                style="?android:attr/buttonBarButtonStyle"/>
+                android:text="🏠 Home Assistant"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
         </LinearLayout>
 
         <!-- Variáveis dinâmicas -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Variáveis dinâmicas (clique para inserir):"
-            android:textSize="14sp"/>
+            android:text="Variáveis:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
 
             <TextView
                 android:id="@+id/chipVarId"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="{{notification.id}}"
-                android:padding="8dp"
-                android:layout_margin="4dp"
-                android:background="#E0E0E0"
+                android:text="📌 {{notification.id}}"
+                android:padding="12dp"
+                android:layout_margin="2dp"
+                android:background="#F0F0F0"
                 android:clickable="true"
                 android:focusable="true"
                 android:textColor="#6200EE"/>
 
             <TextView
                 android:id="@+id/chipVarTitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="{{notification.title}}"
-                android:padding="8dp"
-                android:layout_margin="4dp"
-                android:background="#E0E0E0"
+                android:text="📝 {{notification.title}}"
+                android:padding="12dp"
+                android:layout_margin="2dp"
+                android:background="#F0F0F0"
                 android:clickable="true"
                 android:focusable="true"
                 android:textColor="#6200EE"/>
 
             <TextView
                 android:id="@+id/chipVarText"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="{{notification.text}}"
-                android:padding="8dp"
-                android:layout_margin="4dp"
-                android:background="#E0E0E0"
+                android:text="💬 {{notification.text}}"
+                android:padding="12dp"
+                android:layout_margin="2dp"
+                android:background="#F0F0F0"
                 android:clickable="true"
                 android:focusable="true"
                 android:textColor="#6200EE"/>
 
             <TextView
                 android:id="@+id/chipVarPackage"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="{{notification.package}}"
-                android:padding="8dp"
-                android:layout_margin="4dp"
-                android:background="#E0E0E0"
+                android:text="📱 {{notification.package}}"
+                android:padding="12dp"
+                android:layout_margin="2dp"
+                android:background="#F0F0F0"
                 android:clickable="true"
                 android:focusable="true"
                 android:textColor="#6200EE"/>
 
             <TextView
                 android:id="@+id/chipVarRule"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="{{rule.name}}"
-                android:padding="8dp"
-                android:layout_margin="4dp"
-                android:background="#E0E0E0"
+                android:text="📋 {{rule.name}}"
+                android:padding="12dp"
+                android:layout_margin="2dp"
+                android:background="#F0F0F0"
                 android:clickable="true"
                 android:focusable="true"
                 android:textColor="#6200EE"/>
         </LinearLayout>
 
-        
-
-        <!-- Separador -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"/>
-
-
-
-        <!-- ===== 4. CONFIGURAÇÕES AVANÇADAS ===== -->
+        <!-- ===== CONFIGURAÇÕES AVANÇADAS ===== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="⏱️ CONFIGURAÇÕES AVANÇADAS"
-            android:textSize="14sp"
+            android:text="⚙️ CONFIGURAÇÕES AVANÇADAS"
+            android:textSize="16sp"
             android:textStyle="bold"
             android:background="#F0F0F0"
-            android:padding="8dp"
-            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Timeout e Retries -->
+        <!-- Timeout -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -600,11 +520,10 @@
             android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:text="⏰ Timeout:"
-                android:layout_gravity="center_vertical"
-                android:layout_marginEnd="8dp"/>
+                android:layout_gravity="center_vertical"/>
 
             <EditText
                 android:id="@+id/etTimeout"
@@ -620,19 +539,25 @@
                 android:layout_height="wrap_content"
                 android:text="segundos"
                 android:layout_gravity="center_vertical"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="16dp"/>
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <!-- Retries -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="100dp"
                 android:layout_height="wrap_content"
-                android:text="🔁 Retries:"
-                android:layout_gravity="center_vertical"
-                android:layout_marginEnd="8dp"/>
+                android:text="🔄 Retries:"
+                android:layout_gravity="center_vertical"/>
 
             <EditText
                 android:id="@+id/etRetries"
-                android:layout_width="50dp"
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
                 android:text="3"
                 android:inputType="number"
@@ -644,58 +569,58 @@
                 android:layout_height="wrap_content"
                 android:text="tentativas"
                 android:layout_gravity="center_vertical"
-                android:layout_marginStart="4dp"/>
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
 
-        <!-- Payload personalizado -->
+        <!-- Payload -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📦 Payload:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
         <RadioGroup
             android:id="@+id/rgPayloadType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_marginBottom="8dp">
 
             <RadioButton
                 android:id="@+id/rbPayloadDefault"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📦 Payload padrão"
+                android:text="Payload padrão"
                 android:checked="true"/>
 
             <RadioButton
                 android:id="@+id/rbPayloadCustom"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📦 Payload customizado"/>
+                android:text="Payload customizado"/>
         </RadioGroup>
 
         <EditText
             android:id="@+id/etCustomPayload"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint='{"event": "notification", "data": {{payload}}}'
+            android:hint='{\n  "event": "notification",\n  "data": {{payload}}\n}'
             android:inputType="textMultiLine"
             android:lines="4"
             android:padding="8dp"
             android:background="@android:drawable/editbox_background"
             android:visibility="gone"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="16dp"/>
 
         <!-- Aguardar resposta -->
         <CheckBox
             android:id="@+id/cbWaitForResponse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="✅ Aguardar resposta (síncrono)"
+            android:text="⏳ Aguardar resposta do servidor"
             android:layout_marginBottom="16dp"/>
-
-        <!-- Separador final -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"/>
 
     </LinearLayout>
 </ScrollView>

@@ -9,6 +9,7 @@
     app:cardElevation="4dp">
 
     <LinearLayout
+        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -58,7 +59,7 @@
             android:textColor="@android:color/black"
             android:alpha="0.8"/>
 
-        <!-- Status e Webhook -->
+        <!-- Status -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -72,17 +73,23 @@
                 android:layout_weight="1"
                 android:textSize="12sp"
                 android:textStyle="bold"/>
-
-            <TextView
-                android:id="@+id/tvWebhookStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="#F44336"
-                android:visibility="gone"/>
         </LinearLayout>
 
-        <!-- Botões de ação (para notificações pendentes) -->
+        <!-- Mensagem de erro -->
+        <TextView
+            android:id="@+id/tvError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#F44336"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"/>
+
+        <!-- Resposta do servidor (adicionada dinamicamente) -->
+
+        <!-- Botões de ação -->
         <LinearLayout
             android:id="@+id/layoutActions"
             android:layout_width="match_parent"
