@@ -109,7 +109,7 @@
             android:layout_margin="2dp"
             android:background="@drawable/filter_button_background"
             android:text="✅ 0"
-            android:textSize="28sp"
+            android:textSize="14sp"
             android:alpha="0.5"
             android:tag="approved"/>
 

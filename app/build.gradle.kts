@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.seuapp.notificationautomator"
+    namespace = "com.nunomonteiro.notificationwebhooks"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.seuapp.notificationautomator"
+        applicationId = "com.nunomonteiro.notificationwebhooks"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
