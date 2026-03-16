@@ -1,0 +1,701 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Título da secção -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Escolha a ação:"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgActionType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp">
+
+            <RadioButton
+                android:id="@+id/rbWebhookAuto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🌐 Webhook Automático"
+                android:checked="true"/>
+
+            <RadioButton
+                android:id="@+id/rbWebhookAuth"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔐 Autorizar antes de enviar"/>
+        </RadioGroup>
+
+        <!-- ===== 1. GESTÃO DE ENDEREÇOS ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📋 GESTÃO DE ENDEREÇOS"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="#F0F0F0"
+            android:padding="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Formulário para novo webhook -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➕ Adicionar novo webhook"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Nome -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etWebhookName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Nome do webhook (ex: Produção)"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- URL -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/actWebhookUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="URL do webhook"
+                        android:inputType="textUri"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Botões -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btnTestWebhook"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="▶️ Testar"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginEnd="8dp"/>
+
+                    <Button
+                        android:id="@+id/btnSaveWebhook"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💾 Guardar"
+                        style="@style/Widget.MaterialComponents.Button"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Lista de webhooks guardados -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📚 Webhooks Guardados:"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Container para os cards -->
+        <LinearLayout
+            android:id="@+id/layoutSavedWebhooks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
+        
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"/>
+
+
+        <!-- ===== 2. SEGURANÇA ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔐 SEGURANÇA"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="#F0F0F0"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- HMAC -->
+        <CheckBox
+            android:id="@+id/cbSignHmac"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏷️ Assinar requests (HMAC-SHA256)"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:id="@+id/layoutHmacSecret"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chave secreta:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etHmacSecret"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="minha-chave-secreta"
+                android:inputType="textVisiblePassword"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        <!-- OpenPGP (simplificado) -->
+        <CheckBox
+            android:id="@+id/cbEnablePgp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📜 OpenPGP (assinatura/criptografia)"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:id="@+id/layoutPgp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chave pública:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etPgpKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="-----BEGIN PGP PUBLIC KEY BLOCK-----"
+                android:inputType="textMultiLine"
+                android:lines="3"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <RadioGroup
+                android:id="@+id/rgPgpFormat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <RadioButton
+                    android:id="@+id/rbPgpAscii"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ASCII Armor"
+                    android:checked="true"/>
+
+                <RadioButton
+                    android:id="@+id/rbPgpBinary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Binário"/>
+            </RadioGroup>
+        </LinearLayout>
+
+        <!-- Autenticação -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ Autenticação:"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgAuthType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/rbAuthNone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nenhuma"
+                android:checked="true"/>
+
+            <RadioButton
+                android:id="@+id/rbAuthBasic"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Basic"/>
+
+            <RadioButton
+                android:id="@+id/rbAuthBearer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bearer"/>
+
+            <RadioButton
+                android:id="@+id/rbAuthApiKey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="API Key"/>
+        </RadioGroup>
+
+        <!-- Basic Auth -->
+        <LinearLayout
+            android:id="@+id/layoutAuthBasic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etAuthUsername"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="utilizador"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Password:"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"/>
+
+            <EditText
+                android:id="@+id/etAuthPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="••••••••"
+                android:inputType="textPassword"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        <!-- Bearer Token -->
+        <LinearLayout
+            android:id="@+id/layoutAuthBearer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Token:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etAuthToken"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="eyJhbGciOiJIUzI1NiIs..."
+                android:inputType="textVisiblePassword"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        <!-- API Key -->
+        <LinearLayout
+            android:id="@+id/layoutAuthApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nome da chave (header):"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etAuthKeyName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="X-API-Key"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Valor:"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"/>
+
+            <EditText
+                android:id="@+id/etAuthKeyValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="abc123def456"
+                android:inputType="textVisiblePassword"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        
+
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"/>
+
+
+        <!-- ===== 3. HEADERS AVANÇADOS ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📋 HEADERS AVANÇADOS"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="#F0F0F0"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Headers JSON editável -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Headers fixos (JSON editável):"
+            android:textSize="14sp"/>
+
+        <EditText
+            android:id="@+id/etHeadersAdvanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint='{"Content-Type": "application/json"}'
+            android:inputType="textMultiLine"
+            android:lines="3"
+            android:padding="8dp"
+            android:background="@android:drawable/editbox_background"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Templates pré-definidos -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Templates pré-definidos:"
+            android:textSize="14sp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnTemplateN8n"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📦 n8n"
+                style="?android:attr/buttonBarButtonStyle"/>
+
+            <Button
+                android:id="@+id/btnTemplateZapier"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🔌 Zapier"
+                style="?android:attr/buttonBarButtonStyle"/>
+
+            <Button
+                android:id="@+id/btnTemplateIfttt"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🤖 IFTTT"
+                style="?android:attr/buttonBarButtonStyle"/>
+
+            <Button
+                android:id="@+id/btnTemplateHomeAssistant"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🏠 Home"
+                style="?android:attr/buttonBarButtonStyle"/>
+        </LinearLayout>
+
+        <!-- Variáveis dinâmicas -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Variáveis dinâmicas (clique para inserir):"
+            android:textSize="14sp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/chipVarId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="{{notification.id}}"
+                android:padding="8dp"
+                android:layout_margin="4dp"
+                android:background="#E0E0E0"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="#6200EE"/>
+
+            <TextView
+                android:id="@+id/chipVarTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="{{notification.title}}"
+                android:padding="8dp"
+                android:layout_margin="4dp"
+                android:background="#E0E0E0"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="#6200EE"/>
+
+            <TextView
+                android:id="@+id/chipVarText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="{{notification.text}}"
+                android:padding="8dp"
+                android:layout_margin="4dp"
+                android:background="#E0E0E0"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="#6200EE"/>
+
+            <TextView
+                android:id="@+id/chipVarPackage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="{{notification.package}}"
+                android:padding="8dp"
+                android:layout_margin="4dp"
+                android:background="#E0E0E0"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="#6200EE"/>
+
+            <TextView
+                android:id="@+id/chipVarRule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="{{rule.name}}"
+                android:padding="8dp"
+                android:layout_margin="4dp"
+                android:background="#E0E0E0"
+                android:clickable="true"
+                android:focusable="true"
+                android:textColor="#6200EE"/>
+        </LinearLayout>
+
+        
+
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"/>
+
+
+
+        <!-- ===== 4. CONFIGURAÇÕES AVANÇADAS ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⏱️ CONFIGURAÇÕES AVANÇADAS"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="#F0F0F0"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Timeout e Retries -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏰ Timeout:"
+                android:layout_gravity="center_vertical"
+                android:layout_marginEnd="8dp"/>
+
+            <EditText
+                android:id="@+id/etTimeout"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:text="10"
+                android:inputType="number"
+                android:padding="4dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="segundos"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔁 Retries:"
+                android:layout_gravity="center_vertical"
+                android:layout_marginEnd="8dp"/>
+
+            <EditText
+                android:id="@+id/etRetries"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:text="3"
+                android:inputType="number"
+                android:padding="4dp"
+                android:background="@android:drawable/editbox_background"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="tentativas"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
+        <!-- Payload personalizado -->
+        <RadioGroup
+            android:id="@+id/rgPayloadType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/rbPayloadDefault"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📦 Payload padrão"
+                android:checked="true"/>
+
+            <RadioButton
+                android:id="@+id/rbPayloadCustom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📦 Payload customizado"/>
+        </RadioGroup>
+
+        <EditText
+            android:id="@+id/etCustomPayload"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint='{"event": "notification", "data": {{payload}}}'
+            android:inputType="textMultiLine"
+            android:lines="4"
+            android:padding="8dp"
+            android:background="@android:drawable/editbox_background"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Aguardar resposta -->
+        <CheckBox
+            android:id="@+id/cbWaitForResponse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✅ Aguardar resposta (síncrono)"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Separador final -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"/>
+
+    </LinearLayout>
+</ScrollView>

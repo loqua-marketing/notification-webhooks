@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Condições (todas são aplicadas)"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Título contém -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Título contém:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etTitleContains"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ex: fatura, alerta, promoção"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        <!-- Texto contém -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Texto contém:"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/etTextContains"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ex: disponível, mensagem, convite"
+                android:padding="8dp"
+                android:background="@android:drawable/editbox_background"/>
+        </LinearLayout>
+
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginVertical="16dp"/>
+
+        <!-- Checkbox para ativar horário -->
+        <CheckBox
+            android:id="@+id/cbEnableTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ativar horário específico"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Horário (inicialmente desativado) -->
+        <LinearLayout
+            android:id="@+id/layoutTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Horário:"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Das"
+                    android:layout_marginEnd="8dp"/>
+
+                <EditText
+                    android:id="@+id/etHourFrom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="09:00"
+                    android:inputType="time"
+                    android:padding="8dp"
+                    android:background="@android:drawable/editbox_background"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="às"
+                    android:layout_marginEnd="8dp"/>
+
+                <EditText
+                    android:id="@+id/etHourTo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="18:00"
+                    android:inputType="time"
+                    android:padding="8dp"
+                    android:background="@android:drawable/editbox_background"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Checkbox para ativar dias específicos -->
+        <CheckBox
+            android:id="@+id/cbEnableSpecificDays"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ativar dias específicos"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Container para os dias (inicialmente oculto) -->
+        <LinearLayout
+            android:id="@+id/layoutDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dias da semana:"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <CheckBox
+                    android:id="@+id/cbMonday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Seg"/>
+
+                <CheckBox
+                    android:id="@+id/cbTuesday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Ter"/>
+
+                <CheckBox
+                    android:id="@+id/cbWednesday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Qua"/>
+
+                <CheckBox
+                    android:id="@+id/cbThursday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Qui"/>
+
+                <CheckBox
+                    android:id="@+id/cbFriday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sex"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <CheckBox
+                    android:id="@+id/cbSaturday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sáb"/>
+
+                <CheckBox
+                    android:id="@+id/cbSunday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Dom"/>
+
+                <CheckBox
+                    android:id="@+id/cbAllDays"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Todos"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginVertical="16dp"/>
+
+        <!-- Tipo de notificação -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tipo de notificação:"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgNotificationType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/rbAnyType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Qualquer tipo"
+                android:checked="true"/>
+
+            <RadioButton
+                android:id="@+id/rbSilent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔇 Silenciosa"/>
+
+            <RadioButton
+                android:id="@+id/rbAlerting"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔔 Alertante"/>
+        </RadioGroup>
+
+        <!-- Com imagem -->
+        <CheckBox
+            android:id="@+id/cbHasImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🖼️ Com imagem"/>
+
+    </LinearLayout>
+</ScrollView>

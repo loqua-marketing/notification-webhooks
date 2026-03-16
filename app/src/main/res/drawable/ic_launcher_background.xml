@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    
+    <!-- Fundo verde claro -->
+    <solid android:color="#E8F5E9"/>
+    
+    <!-- Cantos arredondados (20dp para um ícone de 108dp fica com ~18.5% arredondamento) -->
+    <corners android:radius="20dp"/>
+    
+</shape>

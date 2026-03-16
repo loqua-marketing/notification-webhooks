@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@android:color/white">
+
+    <!-- Filtros Linha 1 -->
+    <LinearLayout
+        android:id="@+id/filterRow1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
+
+        <Button
+            android:id="@+id/btnFilterAll"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="📥 0"
+            android:textSize="14sp"
+            android:alpha="1.0"
+            android:tag="all"/>
+
+        <Button
+            android:id="@+id/btnFilterPending"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="⏳ 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="pending"/>
+
+        <Button
+            android:id="@+id/btnFilterAutomatic"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🤖 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="auto"/>
+
+        <Button
+            android:id="@+id/btnFilterHidden"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🙈 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="hidden"/>
+    </LinearLayout>
+
+    <!-- Filtros Linha 2 -->
+    <LinearLayout
+        android:id="@+id/filterRow2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
+
+        <Button
+            android:id="@+id/btnFilterWebhookSuccess"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🌐 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="webhook_success"/>
+
+        <Button
+            android:id="@+id/btnFilterWebhookError"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="⚠️ 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="webhook_error"/>
+
+        <Button
+            android:id="@+id/btnFilterApproved"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="✅ 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="approved"/>
+
+        <Button
+            android:id="@+id/btnFilterRejected"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/filter_button_background"
+            android:text="❌ 0"
+            android:textSize="14sp"
+            android:alpha="0.5"
+            android:tag="rejected"/>
+    </LinearLayout>
+
+    <!-- Container para as notificações (ScrollView) -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"/>
+    </ScrollView>
+
+    <!-- Barra inferior com ações -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp"
+        android:background="@android:color/white"
+        android:elevation="4dp">
+
+        <Button
+            android:id="@+id/btnLoadMore"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="➕25"
+            android:textSize="20sp"
+            android:visibility="gone"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnRefresh"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🔄"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="🗑️"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_margin="4dp"
+            android:background="@drawable/filter_button_background"
+            android:text="⚙️"
+            android:textSize="30sp"
+            android:padding="8dp"/>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:visibility="gone"/>
+    </LinearLayout>
+
+    <!-- TextView para lista vazia -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Nenhuma notificação encontrada"
+        android:textSize="16sp"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="gone"/>
+</LinearLayout>

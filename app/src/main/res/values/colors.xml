@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorAccent">#03DAC5</color>
+    <color name="colorFilterBackground">#F5F5F5</color>
+    <color name="filter_all">#2196F3</color>      <!-- Azul -->
+    <color name="filter_pending">#FF9800</color>  <!-- Laranja -->
+    <color name="filter_auto">#4CAF50</color>     <!-- Verde -->
+    <color name="filter_hidden">#9E9E9E</color>   <!-- Cinza -->
+    <color name="filter_success">#8BC34A</color>  <!-- Verde claro -->
+    <color name="filter_error">#F44336</color>    <!-- Vermelho -->
+    <color name="filter_approved">#00BCD4</color> <!-- Ciano -->
+    <color name="filter_rejected">#FF5722</color> <!-- Laranja escuro -->
+    <color name="colorFilterBackgroundPressed">#E0E0E0</color>
+</resources>
