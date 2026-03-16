@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="A carregar..."
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnCheckPermission"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Verificar/Ativar Permissão"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnViewList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📋 Ver Lista de Notificações"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- NOVO BOTÃO DE REGRAS -->
+    <Button
+        android:id="@+id/btnRules"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚙️ Gerir Regras"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="#FF9800"/>  <!-- Laranja para destacar -->
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Notificações de Teste"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnGmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gmail - Fatura"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnLinkedIn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="LinkedIn - Convite"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnFacebook"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Facebook - Mensagem"
+        android:layout_marginBottom="16dp"/>
+
+</LinearLayout>
